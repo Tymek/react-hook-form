@@ -274,5 +274,5 @@ export interface UseFormMethods<
     onValid: SubmitHandler<TSubmitFieldValues>,
     onInvalid?: SubmitErrorHandler<TFieldValues>,
   ) => (e?: React.BaseSyntheticEvent) => Promise<void>;
-  control: Control<TFieldValues>;
+  control: Control<FieldValues>;
 }
