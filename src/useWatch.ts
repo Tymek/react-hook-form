@@ -11,33 +11,37 @@ import {
   UseWatchOptions,
   FieldValues,
   UnpackNestedValue,
+  InternalFieldName,
   Control,
 } from './types';
 
-export function useWatch<TWatchFieldValues extends FieldValues>(props: {
+export function useWatch<
+  TWatchFieldValues extends FieldValues = FieldValues
+>(props: {
   defaultValue?: UnpackNestedValue<DeepPartial<TWatchFieldValues>>;
-  control?: Control;
+  control?: Control<TWatchFieldValues>;
 }): UnpackNestedValue<DeepPartial<TWatchFieldValues>>;
+
 export function useWatch<TWatchFieldValue extends any>(props: {
   name: string;
-  control?: Control;
-}): undefined | UnpackNestedValue<TWatchFieldValue>;
-export function useWatch<TWatchFieldValue extends any>(props: {
-  name: string;
-  defaultValue: UnpackNestedValue<TWatchFieldValue>;
-  control?: Control;
+  defaultValue?: UnpackNestedValue<TWatchFieldValue>;
+  control?: Control<any>;
 }): UnpackNestedValue<TWatchFieldValue>;
-export function useWatch<TWatchFieldValues extends FieldValues>(props: {
-  name: string[];
+
+export function useWatch<
+  TWatchFieldValues extends FieldValues = FieldValues
+>(props: {
+  name: InternalFieldName<TWatchFieldValues>[];
   defaultValue?: UnpackNestedValue<DeepPartial<TWatchFieldValues>>;
-  control?: Control;
+  control?: Control<TWatchFieldValues>;
 }): UnpackNestedValue<DeepPartial<TWatchFieldValues>>;
+
 export function useWatch<TWatchFieldValues>({
   control,
   name,
   defaultValue,
-}: UseWatchOptions): TWatchFieldValues {
-  const methods = useFormContext();
+}: UseWatchOptions<TWatchFieldValues>): TWatchFieldValues {
+  const methods = useFormContext<TWatchFieldValues>();
 
   if (process.env.NODE_ENV !== 'production') {
     if (!control && !methods) {
@@ -67,7 +71,7 @@ export function useWatch<TWatchFieldValues>({
         ? name.reduce(
             (previous, inputName) => ({
               ...previous,
-              [inputName]: get(defaultValuesRef.current, inputName),
+              [inputName]: get(defaultValuesRef.current, <string>inputName),
             }),
             {},
           )

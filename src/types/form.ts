@@ -124,10 +124,12 @@ export type OmitResetState = Partial<{
   dirtyFields: boolean;
 }>;
 
-export type Control<TFieldValues extends FieldValues = FieldValues> = Pick<
-  UseFormMethods<TFieldValues>,
-  'register' | 'unregister' | 'setValue' | 'getValues' | 'trigger'
-> & {
+export type Control<TFieldValues extends FieldValues = FieldValues> = {
+  register: UseFormMethods<TFieldValues>['register'];
+  unregister: UseFormMethods<TFieldValues>['unregister'];
+  setValue: UseFormMethods<TFieldValues>['setValue'];
+  getValues: UseFormMethods<TFieldValues>['getValues'];
+  trigger: UseFormMethods<TFieldValues>['trigger'];
   removeFieldEventListener: (field: Field, forceDelete?: boolean) => void;
   mode: Readonly<{
     isOnBlur: boolean;
@@ -170,17 +172,19 @@ export type Control<TFieldValues extends FieldValues = FieldValues> = Pick<
     Record<string, () => void>
   >;
   watchInternal: (
-    fieldNames?: string | string[],
+    fieldNames?:
+      | InternalFieldName<TFieldValues>
+      | InternalFieldName<TFieldValues>[],
     defaultValue?: unknown,
     watchId?: string,
   ) => unknown;
   renderWatchedInputs: (name: string, found?: boolean) => void;
 };
 
-export type UseWatchOptions = {
-  defaultValue?: unknown;
-  name?: string | string[];
-  control?: Control;
+export type UseWatchOptions<TFieldValues extends FieldValues = FieldValues> = {
+  defaultValue?: UnpackNestedValue<DeepPartial<TFieldValues>>;
+  name?: InternalFieldName<TFieldValues> | InternalFieldName<TFieldValues>[];
+  control?: Control<TFieldValues>;
 };
 
 export type UseFormMethods<TFieldValues extends FieldValues = FieldValues> = {
