@@ -6,6 +6,7 @@ const getTestMatch = (name) =>
   ['**/+([a-zA-Z])', name, '(spec|test).ts?(x)'].filter(Boolean).join('.');
 
 const common = {
+  rootDir: '.',
   roots: ['<rootDir>/src'],
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
@@ -26,7 +27,7 @@ const web = {
     color: 'cyan',
   },
   testMatch: [getTestMatch()],
-  setupFilesAfterEnv: ['<rootDir>/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/scripts/jest/setup.ts'],
 };
 
 const server = {
@@ -62,7 +63,7 @@ const native = {
     '[/\\\\]node_modules[/\\\\](?!react-native)[/\\\\].+',
   ],
   setupFiles: [...jestPresets.setupFiles],
-  setupFilesAfterEnv: ['<rootDir>/setup.native.ts'],
+  setupFilesAfterEnv: ['<rootDir>/scripts/jest/setup.native.ts'],
 };
 
 const getProjects = () => {

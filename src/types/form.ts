@@ -1,10 +1,5 @@
 import * as React from 'react';
-import {
-  NonUndefined,
-  LiteralToPrimitive,
-  DeepPartial,
-  DeepMap,
-} from './utils';
+import { LiteralToPrimitive, DeepPartial, DeepMap } from './utils';
 import { Resolver } from './resolvers';
 import {
   Field,
@@ -59,12 +54,12 @@ export type Mode = keyof ValidationMode;
 export type SubmitHandler<TFieldValues extends FieldValues> = (
   data: UnpackNestedValue<TFieldValues>,
   event?: React.BaseSyntheticEvent,
-) => void | Promise<void>;
+) => any | Promise<any>;
 
 export type SubmitErrorHandler<TFieldValues extends FieldValues> = (
   errors: FieldErrors<TFieldValues>,
   event?: React.BaseSyntheticEvent,
-) => void | Promise<void>;
+) => any | Promise<any>;
 
 export type SetValueConfig = Partial<{
   shouldValidate: boolean;
@@ -79,7 +74,7 @@ export type UseFormOptions<
 > = Partial<{
   mode: Mode;
   reValidateMode: Exclude<Mode, 'onTouched' | 'all'>;
-  defaultValues: Partial<UnpackNestedValue<DeepPartial<TFieldValues>>>;
+  defaultValues: UnpackNestedValue<DeepPartial<TFieldValues>>;
   resolver: Resolver<TFieldValues, TContext>;
   context: TContext;
   shouldFocusError: boolean;
@@ -177,10 +172,10 @@ export type Control<TFieldValues extends FieldValues = FieldValues> = Pick<
   renderWatchedInputs: (name: string, found?: boolean) => void;
 };
 
-export type UseWatchOptions = {
+export type UseWatchOptions<TFieldValues extends FieldValues = FieldValues> = {
   defaultValue?: unknown;
   name?: string | string[];
-  control?: Control;
+  control?: Control<TFieldValues>;
 };
 
 export type UseFormMethods<TFieldValues extends FieldValues = FieldValues> = {
@@ -231,12 +226,9 @@ export type UseFormMethods<TFieldValues extends FieldValues = FieldValues> = {
     TFieldValue extends TFieldValues[TFieldName]
   >(
     name: TFieldName,
-    value:
-      | (NonUndefined<TFieldValue> extends NestedValue<infer U>
-          ? U
-          : UnpackNestedValue<DeepPartial<LiteralToPrimitive<TFieldValue>>>)
-      | null
-      | undefined,
+    value: TFieldValue extends NestedValue<infer U>
+      ? U
+      : UnpackNestedValue<DeepPartial<LiteralToPrimitive<TFieldValue>>>,
     options?: SetValueConfig,
   ) => void;
   trigger: (

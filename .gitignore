@@ -31,8 +31,8 @@ example/build/
 /dist
 .idea/
 .rpt2_cache
-.coveralls.yml
 package-lock.json
 /cypress/videos
+/cypress/parallel-weights.json
 /cypress/screenshots
 /cypress/fixtures

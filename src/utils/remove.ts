@@ -1,6 +1,5 @@
 import isUndefined from './isUndefined';
-import isArray from './isArray';
-import filterOutFalsy from './filterOutFalsy';
+import compact from './compact';
 
 const removeAt = <T>(data: T[], index: number): T[] => [
   ...data.slice(0, index),
@@ -16,12 +15,12 @@ function removeAtIndexes<T>(data: T[], index: number[]): T[] {
     }
   }
 
-  return filterOutFalsy(data);
+  return compact(data);
 }
 
 export default <T>(data: T[], index?: number | number[]): T[] =>
   isUndefined(index)
     ? []
-    : isArray(index)
+    : Array.isArray(index)
     ? removeAtIndexes(data, index)
     : removeAt(data, index);
