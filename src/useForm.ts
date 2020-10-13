@@ -747,7 +747,9 @@ export function useForm<
 
   const watchInternal = React.useCallback(
     (
-      fieldNames?: string | string[],
+      fieldNames?:
+        | InternalFieldName<TFieldValues>
+        | InternalFieldName<TFieldValues>[],
       defaultValue?: unknown,
       watchId?: string,
     ) => {

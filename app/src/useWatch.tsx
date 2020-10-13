@@ -2,13 +2,19 @@ import * as React from 'react';
 import { useForm, Control, useWatch, Controller } from 'react-hook-form';
 import { useRef } from 'react';
 
+type FormValues = {
+  test: string;
+  test1: string;
+  test2: string;
+}
+
 let counter = 0;
 
 const GrandChild = ({
   control,
   index = 0,
 }: {
-  control: Control;
+  control: Control<any>;
   index?: number;
 }) => {
   const counter1 = useRef(0);
@@ -29,9 +35,9 @@ const GrandChild = ({
   );
 };
 
-const GrandChild1 = ({ control }: { control: Control }) => {
+const GrandChild1 = ({ control }: { control: Control<{ test: string, test1: string }> }) => {
   const counter = useRef(0);
-  const output = useWatch<{ test: string; test1: string }>({
+  const output = useWatch({
     name: ['test', 'test1'],
     control,
     defaultValue: { test: '', test1: '' },
@@ -51,13 +57,9 @@ const GrandChild1 = ({ control }: { control: Control }) => {
   );
 };
 
-const GrandChild2 = ({ control }: { control: Control }) => {
+const GrandChild2 = ({ control }: { control: Control<FormValues> }) => {
   const counter = useRef(0);
-  const output = useWatch<{
-    test: string;
-    test1: string;
-    test2: string;
-  }>({
+  const output = useWatch<FormValues>({
     control,
   });
 
@@ -92,7 +94,7 @@ const Child = ({ control }: { control: Control }) => {
 };
 
 export default () => {
-  const { register, control } = useForm();
+  const { register, control } = useForm<FormValues>();
 
   counter++;
 
