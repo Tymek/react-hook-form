@@ -12,11 +12,10 @@ import unset from './utils/unset';
 import moveArrayAt from './utils/move';
 import swapArrayAt from './utils/swap';
 import prependAt from './utils/prepend';
-import isArray from './utils/isArray';
 import insertAt from './utils/insert';
 import fillEmptyArray from './utils/fillEmptyArray';
-import filterBooleanArray from './utils/filterBooleanArray';
-import filterOutFalsy from './utils/filterOutFalsy';
+import fillBooleanArray from './utils/fillBooleanArray';
+import compact from './utils/compact';
 import {
   Field,
   FieldValues,
@@ -25,6 +24,7 @@ import {
   ArrayField,
   UnpackNestedValue,
   DeepPartial,
+  UseFieldArrayMethods,
 } from './types';
 
 const appendId = <TValue extends object, TKeyName extends string>(
@@ -38,7 +38,7 @@ const appendId = <TValue extends object, TKeyName extends string>(
 const mapIds = <TData extends object, TKeyName extends string>(
   data: TData | TData[],
   keyName: TKeyName,
-) => (isArray(data) ? data : []).map((value) => appendId(value, keyName));
+) => (Array.isArray(data) ? data : []).map((value) => appendId(value, keyName));
 
 export const useFieldArray = <
   TFieldArrayValues extends FieldValues = FieldValues,
@@ -48,19 +48,16 @@ export const useFieldArray = <
   control,
   name,
   keyName = 'id' as TKeyName,
-}: UseFieldArrayOptions<TKeyName, TControl>) => {
+}: UseFieldArrayOptions<TKeyName, TControl>): UseFieldArrayMethods<
+  TFieldArrayValues,
+  TKeyName
+> => {
   const methods = useFormContext();
 
   if (process.env.NODE_ENV !== 'production') {
     if (!control && !methods) {
       throw new Error(
         '📋 useFieldArray is missing `control` prop. https://react-hook-form.com/api#useFieldArray',
-      );
-    }
-
-    if (!name) {
-      console.warn(
-        '📋 useFieldArray is missing `name` attribute. https://react-hook-form.com/api#useFieldArray',
       );
     }
   }
@@ -75,7 +72,7 @@ export const useFieldArray = <
     removeFieldEventListener,
     formStateRef,
     formStateRef: {
-      current: { dirtyFields, touched },
+      current: { touched },
     },
     shallowFieldsStateRef,
     updateFormState,
@@ -94,7 +91,13 @@ export const useFieldArray = <
   const getDefaultValues = () => [
     ...(get(fieldArrayDefaultValuesRef.current, fieldArrayParentName)
       ? get(fieldArrayDefaultValuesRef.current, name, [])
-      : get(defaultValuesRef.current, name, [])),
+      : get(
+          shouldUnregister
+            ? defaultValuesRef.current
+            : shallowFieldsStateRef.current,
+          name,
+          [],
+        )),
   ];
   const memoizedDefaultValues = React.useRef<Partial<TFieldArrayValues>[]>(
     getDefaultValues(),
@@ -134,7 +137,7 @@ export const useFieldArray = <
     setFields(fieldsValues);
 
     if (readFormStateRef.current.isValid && validateResolver) {
-      const values = {};
+      const values = getValues();
       set(values, name, fieldsValues);
       validateResolver(values);
     }
@@ -160,9 +163,51 @@ export const useFieldArray = <
   };
 
   const cleanup = <T>(ref: T) =>
-    !filterOutFalsy(get(ref, name, [])).length && unset(ref, name);
+    !compact(get(ref, name, [])).length && unset(ref, name);
 
-  const batchStateUpdate = <T extends Function>(
+  const updateDirtyFieldsWithDefaultValues = <
+    T extends { [k: string]: unknown }[]
+  >(
+    updatedFieldArrayValues?: T,
+  ) => {
+    const defaultFieldArrayValues = get(defaultValuesRef.current, name, []);
+    const updateDirtyFieldsBaseOnDefaultValues = <U extends T>(
+      base: U,
+      target: U,
+    ) => {
+      for (const key in base) {
+        for (const innerKey in base[key]) {
+          if (
+            innerKey !== keyName &&
+            (!target[key] ||
+              !base[key] ||
+              base[key][innerKey] !== target[key][innerKey])
+          ) {
+            set(formStateRef.current.dirtyFields, `${name}[${key}]`, {
+              ...get(formStateRef.current.dirtyFields, `${name}[${key}]`, {}),
+              [innerKey]: true,
+            });
+          }
+        }
+      }
+    };
+
+    if (updatedFieldArrayValues) {
+      updateDirtyFieldsBaseOnDefaultValues(
+        defaultFieldArrayValues,
+        updatedFieldArrayValues,
+      );
+      updateDirtyFieldsBaseOnDefaultValues(
+        updatedFieldArrayValues,
+        defaultFieldArrayValues,
+      );
+    }
+  };
+
+  const batchStateUpdate = <
+    T extends Function,
+    K extends { [k: string]: unknown }[]
+  >(
     method: T,
     args: {
       argA?: unknown;
@@ -170,6 +215,7 @@ export const useFieldArray = <
       argC?: unknown;
       argD?: unknown;
     },
+    updatedFieldValues?: K,
     isDirty = true,
     shouldSet = true,
     shouldUpdateValid = false,
@@ -181,7 +227,6 @@ export const useFieldArray = <
         args.argB,
       );
       shouldSet && set(shallowFieldsStateRef.current, name, output);
-      cleanup(shallowFieldsStateRef.current);
     }
 
     if (get(fieldArrayDefaultValuesRef.current, name)) {
@@ -194,7 +239,7 @@ export const useFieldArray = <
       cleanup(fieldArrayDefaultValuesRef.current);
     }
 
-    if (isArray(get(formStateRef.current.errors, name))) {
+    if (Array.isArray(get(formStateRef.current.errors, name))) {
       const output = method(
         get(formStateRef.current.errors, name),
         args.argA,
@@ -214,9 +259,15 @@ export const useFieldArray = <
       readFormStateRef.current.dirtyFields ||
       readFormStateRef.current.isDirty
     ) {
-      const output = method(get(dirtyFields, name, []), args.argC, args.argD);
-      shouldSet && set(dirtyFields, name, output);
-      cleanup(dirtyFields);
+      const output = method(
+        get(formStateRef.current.dirtyFields, name, []),
+        args.argC,
+        args.argD,
+      );
+      shouldSet && set(formStateRef.current.dirtyFields, name, output);
+      updateDirtyFieldsWithDefaultValues(updatedFieldValues);
+
+      cleanup(formStateRef.current.dirtyFields);
     }
 
     if (
@@ -241,7 +292,7 @@ export const useFieldArray = <
 
     updateFormState({
       errors: formStateRef.current.errors,
-      dirtyFields,
+      dirtyFields: formStateRef.current.dirtyFields,
       isDirty,
       touched,
     });
@@ -251,34 +302,33 @@ export const useFieldArray = <
     value: Partial<TFieldArrayValues> | Partial<TFieldArrayValues>[],
     shouldFocus = true,
   ) => {
-    setFieldAndValidState([
+    const updateFormValues = [
       ...allFields.current,
-      ...(isArray(value)
+      ...(Array.isArray(value)
         ? appendValueWithKey(value)
         : [appendId(value, keyName)]),
-    ]);
+    ];
+    setFieldAndValidState(updateFormValues);
 
     if (
       readFormStateRef.current.dirtyFields ||
       readFormStateRef.current.isDirty
     ) {
-      set(dirtyFields, name, [
-        ...(isArray(get(dirtyFields, name))
-          ? get(dirtyFields, name)
-          : fillEmptyArray(allFields.current)),
-        ...filterBooleanArray(value),
-      ]);
+      updateDirtyFieldsWithDefaultValues(updateFormValues);
+
       updateFormState({
         isDirty: true,
-        dirtyFields,
+        dirtyFields: formStateRef.current.dirtyFields,
       });
     }
 
     if (!shouldUnregister) {
-      shallowFieldsStateRef.current[name] = [value];
+      shallowFieldsStateRef.current[name] = [
+        ...(shallowFieldsStateRef.current[name] || []),
+        value,
+      ];
     }
     focusIndexRef.current = shouldFocus ? allFields.current.length : -1;
-    renderWatchedInputs(name);
   };
 
   const prepend = (
@@ -286,25 +336,35 @@ export const useFieldArray = <
     shouldFocus = true,
   ) => {
     const emptyArray = fillEmptyArray(value);
-
-    setFieldAndValidState(
-      prependAt(
-        getCurrentFieldsValues(),
-        isArray(value) ? appendValueWithKey(value) : [appendId(value, keyName)],
-      ),
+    const updatedFieldArrayValues = prependAt(
+      getCurrentFieldsValues(),
+      Array.isArray(value)
+        ? appendValueWithKey(value)
+        : [appendId(value, keyName)],
     );
+
+    setFieldAndValidState(updatedFieldArrayValues);
     resetFields();
-    batchStateUpdate(prependAt, {
-      argA: emptyArray,
-      argC: filterBooleanArray(value),
-    });
-    renderWatchedInputs(name);
+    batchStateUpdate(
+      prependAt,
+      {
+        argA: emptyArray,
+        argC: fillBooleanArray(value),
+      },
+      updatedFieldArrayValues,
+    );
     focusIndexRef.current = shouldFocus ? 0 : -1;
   };
 
   const remove = (index?: number | number[]) => {
     const fieldValues = getCurrentFieldsValues();
-    setFieldAndValidState(removeArrayAt(fieldValues, index));
+    const updatedFieldValues: { [k: string]: unknown }[] = removeArrayAt(
+      fieldValues,
+      index,
+    );
+    setFieldAndValidState(
+      updatedFieldValues as Partial<ArrayField<TFieldArrayValues, TKeyName>>[],
+    );
     resetFields();
     batchStateUpdate(
       removeArrayAt,
@@ -312,12 +372,11 @@ export const useFieldArray = <
         argA: index,
         argC: index,
       },
+      updatedFieldValues,
       getIsDirtyState(removeArrayAt(fieldValues, index)),
       true,
       true,
     );
-
-    renderWatchedInputs(name);
   };
 
   const insert = (
@@ -327,14 +386,15 @@ export const useFieldArray = <
   ) => {
     const emptyArray = fillEmptyArray(value);
     const fieldValues = getCurrentFieldsValues();
-
-    setFieldAndValidState(
-      insertAt(
-        fieldValues,
-        index,
-        isArray(value) ? appendValueWithKey(value) : [appendId(value, keyName)],
-      ),
+    const updatedFieldArrayValues = insertAt(
+      fieldValues,
+      index,
+      Array.isArray(value)
+        ? appendValueWithKey(value)
+        : [appendId(value, keyName)],
     );
+
+    setFieldAndValidState(updatedFieldArrayValues);
     resetFields();
     batchStateUpdate(
       insertAt,
@@ -342,11 +402,11 @@ export const useFieldArray = <
         argA: index,
         argB: emptyArray,
         argC: index,
-        argD: filterBooleanArray(value),
+        argD: fillBooleanArray(value),
       },
+      updatedFieldArrayValues,
       getIsDirtyState(insertAt(fieldValues, index)),
     );
-    renderWatchedInputs(name);
     focusIndexRef.current = shouldFocus ? index : -1;
   };
 
@@ -363,10 +423,10 @@ export const useFieldArray = <
         argC: indexA,
         argD: indexB,
       },
+      undefined,
       getIsDirtyState(fieldValues),
       false,
     );
-    renderWatchedInputs(name);
   };
 
   const move = (from: number, to: number) => {
@@ -382,10 +442,10 @@ export const useFieldArray = <
         argC: from,
         argD: to,
       },
+      undefined,
       getIsDirtyState(fieldValues),
       false,
     );
-    renderWatchedInputs(name);
   };
 
   const reset = <TFieldValues>(
@@ -399,6 +459,14 @@ export const useFieldArray = <
   };
 
   React.useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      if (!name) {
+        console.warn(
+          '📋 useFieldArray is missing `name` attribute. https://react-hook-form.com/api#useFieldArray',
+        );
+      }
+    }
+
     const defaultValues = get(fieldArrayDefaultValuesRef.current, name);
 
     if (defaultValues && fields.length < defaultValues.length) {
