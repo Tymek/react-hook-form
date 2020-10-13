@@ -7,19 +7,18 @@
 ```tsx
 const { handlSubmit } = useForm({
   shouldUnregister: false,
-})
+});
 
 useFieldArray({
   name: 'test',
-})
+});
 
 handlSubmit((data) => {
   // shouldUnregister: false
-  // result:  { data: {test: []} } 
-
+  // result:  { data: {test: []} }
   // shouldUnregister: true
   // result: {}
-})
+});
 ```
 
 ## [6.8.4] - 2020-09-22
