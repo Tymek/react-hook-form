@@ -14,6 +14,7 @@ module.exports = {
     ecmaFeatures: {
       jsx: true,
     },
+    project: 'tsconfig.eslint.json',
   },
   rules: {
     curly: 'error',
@@ -25,6 +26,12 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-object-literal-type-assertion': 'off',
+    '@typescript-eslint/unbound-method': [
+      'warn',
+      {
+        ignoreStatic: true,
+      },
+    ],
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
     'react/display-name': 'warn',
