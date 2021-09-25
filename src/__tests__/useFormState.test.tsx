@@ -92,7 +92,7 @@ describe('useFormState', () => {
     render(<Component />);
 
     await act(async () => {
-      await fireEvent.input(screen.getByLabelText('test'), {
+      fireEvent.input(screen.getByLabelText('test'), {
         target: {
           value: 'test',
         },
@@ -103,7 +103,7 @@ describe('useFormState', () => {
     screen.getByText('no');
 
     await act(async () => {
-      await fireEvent.input(screen.getByLabelText('test'), {
+      fireEvent.input(screen.getByLabelText('test'), {
         target: {
           value: 'testtest',
         },
@@ -171,7 +171,7 @@ describe('useFormState', () => {
     render(<Component />);
 
     await act(async () => {
-      await fireEvent.input(screen.getByLabelText('test'), {
+      fireEvent.input(screen.getByLabelText('test'), {
         target: {
           value: 'test',
         },
@@ -189,11 +189,11 @@ describe('useFormState', () => {
     screen.getByText('isTouched');
 
     expect(count).toEqual(1);
-    expect(testCount).toEqual(2);
+    expect(testCount).toEqual(3);
     expect(test1Count).toEqual(2);
 
     await act(async () => {
-      await fireEvent.input(screen.getByLabelText('test'), {
+      fireEvent.input(screen.getByLabelText('test'), {
         target: {
           value: '',
         },
@@ -201,7 +201,7 @@ describe('useFormState', () => {
     });
 
     expect(count).toEqual(1);
-    expect(testCount).toEqual(2);
+    expect(testCount).toEqual(3);
     expect(test1Count).toEqual(2);
   });
 
@@ -236,12 +236,303 @@ describe('useFormState', () => {
     render(<Component />);
 
     await act(async () => {
-      await fireEvent.click(screen.getByRole('button'));
+      fireEvent.click(screen.getByRole('button'));
     });
 
     screen.getByText('isSubmitted');
     screen.getByText('1');
 
     expect(count).toEqual(1);
+  });
+
+  it('should only re-render when subscribed field name updated', async () => {
+    let count = 0;
+
+    type FormValues = {
+      firstName: string;
+      lastName: string;
+    };
+
+    const Test = ({ control }: { control: Control<FormValues> }) => {
+      const { errors } = useFormState({
+        control,
+        name: 'firstName',
+      });
+
+      count++;
+
+      return <>{errors?.firstName?.message}</>;
+    };
+
+    const Component = () => {
+      const { control, register } = useForm<FormValues>({
+        mode: 'onChange',
+        defaultValues: {
+          firstName: 'a',
+          lastName: 'b',
+        },
+      });
+
+      return (
+        <form>
+          <Test control={control} />
+          <input
+            {...register('firstName', { required: true })}
+            placeholder={'firstName'}
+          />
+          <input {...register('lastName')} />
+        </form>
+      );
+    };
+
+    render(<Component />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('firstName'), {
+        target: {
+          value: '',
+        },
+      });
+    });
+
+    expect(count).toEqual(2);
+  });
+
+  it('should not re-render when subscribed field name is not included', async () => {
+    let count = 0;
+
+    type FormValues = {
+      firstName: string;
+      lastName: string;
+    };
+
+    const Test = ({ control }: { control: Control<FormValues> }) => {
+      const { errors } = useFormState({
+        control,
+        name: 'lastName',
+      });
+
+      count++;
+
+      return <>{errors?.lastName?.message}</>;
+    };
+
+    const Component = () => {
+      const { control, register } = useForm<FormValues>({
+        mode: 'onChange',
+        defaultValues: {
+          firstName: 'a',
+          lastName: 'b',
+        },
+      });
+
+      return (
+        <form>
+          <Test control={control} />
+          <input
+            {...register('firstName', { required: true })}
+            placeholder={'firstName'}
+          />
+          <input {...register('lastName')} />
+        </form>
+      );
+    };
+
+    render(<Component />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('firstName'), {
+        target: {
+          value: '',
+        },
+      });
+    });
+
+    expect(count).toEqual(1);
+  });
+
+  it('should only re-render when subscribed field names updated', async () => {
+    let count = 0;
+
+    type FormValues = {
+      firstName: string;
+      lastName: string;
+      age: number;
+    };
+
+    const Test = ({ control }: { control: Control<FormValues> }) => {
+      const { errors } = useFormState({
+        control,
+        name: ['firstName', 'lastName'],
+      });
+
+      count++;
+
+      return <>{errors?.firstName?.message}</>;
+    };
+
+    const Component = () => {
+      const { control, register } = useForm<FormValues>({
+        mode: 'onChange',
+        defaultValues: {
+          firstName: 'a',
+          lastName: 'b',
+        },
+      });
+
+      return (
+        <form>
+          <Test control={control} />
+          <input
+            {...register('firstName', { required: true })}
+            placeholder={'firstName'}
+          />
+          <input
+            {...register('lastName', { required: true })}
+            placeholder={'lastName'}
+          />
+          <input
+            {...register('age', { valueAsNumber: true, required: true })}
+            type="number"
+          />
+        </form>
+      );
+    };
+
+    render(<Component />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('firstName'), {
+        target: {
+          value: '',
+        },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('lastName'), {
+        target: {
+          value: '',
+        },
+      });
+    });
+
+    expect(count).toEqual(3);
+  });
+
+  it('should only re-render when subscribed field names updated', async () => {
+    let count = 0;
+
+    type FormValues = {
+      firstName: string;
+      lastName: string;
+      age: number;
+    };
+
+    const Test = ({ control }: { control: Control<FormValues> }) => {
+      const { errors } = useFormState({
+        control,
+        name: ['age', 'lastName'],
+      });
+
+      count++;
+
+      return <>{errors?.firstName?.message}</>;
+    };
+
+    const Component = () => {
+      const { control, register } = useForm<FormValues>({
+        mode: 'onChange',
+        defaultValues: {
+          firstName: 'a',
+          lastName: 'b',
+        },
+      });
+
+      return (
+        <form>
+          <Test control={control} />
+          <input
+            {...register('firstName', { required: true })}
+            placeholder={'firstName'}
+          />
+          <input {...register('lastName')} placeholder={'lastName'} />
+          <input
+            {...register('age', { valueAsNumber: true, required: true })}
+            type="number"
+          />
+        </form>
+      );
+    };
+
+    render(<Component />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('firstName'), {
+        target: {
+          value: '',
+        },
+      });
+    });
+
+    expect(count).toEqual(1);
+  });
+
+  it('should be able to stop the formState subscription', async () => {
+    type FormValues = {
+      test: string;
+    };
+
+    function Child({ control }: { control: Control<FormValues> }) {
+      const [disabled, setDisabled] = React.useState(true);
+      const { errors } = useFormState({
+        control,
+        name: 'test',
+        disabled,
+      });
+
+      return (
+        <div>
+          {errors.test && <p>error</p>}
+          <button onClick={() => setDisabled(!disabled)}>toggle</button>
+        </div>
+      );
+    }
+
+    const App = () => {
+      const { trigger, register, control } = useForm<FormValues>();
+
+      return (
+        <div>
+          <input {...register('test', { required: true })} />
+          <Child control={control} />
+          <button
+            onClick={() => {
+              trigger();
+            }}
+          >
+            trigger
+          </button>
+        </div>
+      );
+    };
+
+    render(<App />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'trigger' }));
+    });
+
+    expect(screen.queryByText('error')).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'trigger' }));
+    });
+
+    screen.getByText('error');
   });
 });

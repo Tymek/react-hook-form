@@ -20,11 +20,12 @@ export interface ResolverOptions<TFieldValues> {
   criteriaMode?: CriteriaMode;
   fields: Record<InternalFieldName, Field['_f']>;
   names?: FieldName<TFieldValues>[];
+  shouldUseNativeValidation: boolean | undefined;
 }
 
 export type Resolver<
   TFieldValues extends FieldValues = FieldValues,
-  TContext extends object = object
+  TContext extends object = object,
 > = (
   values: UnpackNestedValue<TFieldValues>,
   context: TContext | undefined,

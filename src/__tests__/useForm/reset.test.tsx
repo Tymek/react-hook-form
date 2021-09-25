@@ -4,11 +4,18 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from '@testing-library/react';
 import { act, renderHook } from '@testing-library/react-hooks';
 
 import { Controller } from '../../controller';
-import { NestedValue, UseFormReturn } from '../../types';
+import {
+  Control,
+  NestedValue,
+  UseFormRegister,
+  UseFormReturn,
+} from '../../types';
+import { useController } from '../../useController';
 import { useFieldArray } from '../../useFieldArray';
 import { useForm } from '../../useForm';
 
@@ -137,7 +144,7 @@ describe('reset', () => {
 
     act(() => result.current.reset({ test: 'test' }));
 
-    expect(result.current.control.defaultValuesRef.current).toEqual({
+    expect(result.current.control._defaultValues).toEqual({
       test: 'test',
     });
   });
@@ -266,58 +273,114 @@ describe('reset', () => {
   });
 
   it('should not reset if keepStateOption is specified', async () => {
-    const { result } = renderHook(() => useForm<{ test: string }>());
+    let formState = {};
 
-    result.current.register('test');
-
-    result.current.formState.errors = {
-      test: {
-        type: 'test',
-        message: 'something wrong',
-      },
-    };
-    result.current.control.validFieldsRef.current = {
-      test: true,
-    };
-    result.current.control.fieldsWithValidationRef.current = {
-      test: true,
-    };
-
-    result.current.formState.touchedFields = { test: true };
-    result.current.formState.isDirty = true;
-    result.current.formState.isSubmitted = true;
-
-    act(() =>
-      result.current.reset(
-        { test: '' },
-        {
-          keepErrors: true,
-          keepDirty: true,
-          keepIsSubmitted: true,
-          keepTouched: true,
-          keepIsValid: true,
-          keepSubmitCount: true,
+    const App = () => {
+      const {
+        register,
+        handleSubmit,
+        reset,
+        formState: { touchedFields, errors, isDirty },
+      } = useForm<{ test: string }>({
+        defaultValues: {
+          test: '',
         },
-      ),
-    );
+      });
 
-    expect(result.current.formState.errors).toEqual({
-      test: {
-        type: 'test',
-        message: 'something wrong',
-      },
+      formState = { touchedFields, errors, isDirty };
+
+      return (
+        <form onSubmit={handleSubmit(() => {})}>
+          <input {...register('test', { required: true, minLength: 3 })} />
+          <button>submit</button>
+          <button
+            onClick={() => {
+              reset(
+                { test: '' },
+                {
+                  keepErrors: true,
+                  keepDirty: true,
+                  keepIsSubmitted: true,
+                  keepTouched: true,
+                  keepIsValid: true,
+                  keepSubmitCount: true,
+                },
+              );
+            }}
+            type={'button'}
+          >
+            reset
+          </button>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    await actComponent(async () => {
+      fireEvent.change(screen.getByRole('textbox'), {
+        target: {
+          value: 'test',
+        },
+      });
+
+      fireEvent.blur(screen.getByRole('textbox'));
+
+      fireEvent.click(screen.getByRole('button', { name: 'submit' }));
     });
-    expect(result.current.formState.touchedFields).toEqual({
-      test: true,
+
+    expect(formState).toMatchSnapshot();
+
+    await actComponent(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'reset' }));
     });
-    expect(result.current.control.validFieldsRef.current).toEqual({
-      test: true,
+
+    expect(formState).toMatchSnapshot();
+  });
+
+  it('should keep isValid state when keep option is presented', async () => {
+    const App = () => {
+      const {
+        register,
+        reset,
+        formState: { isValid },
+      } = useForm({
+        mode: 'onChange',
+      });
+
+      return (
+        <>
+          <input {...register('test', { required: true })} />
+          {isValid ? 'valid' : 'invalid'}
+          <button
+            onClick={() => {
+              reset(
+                {
+                  test: 'test',
+                },
+                {
+                  keepIsValid: true,
+                },
+              );
+            }}
+          >
+            reset
+          </button>
+        </>
+      );
+    };
+
+    render(<App />);
+
+    await waitFor(() => {
+      screen.getByText('invalid');
     });
-    expect(result.current.control.fieldsWithValidationRef.current).toEqual({
-      test: true,
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      screen.getByText('invalid');
     });
-    expect(result.current.formState.isDirty).toBeTruthy();
-    expect(result.current.formState.isSubmitted).toBeTruthy();
   });
 
   it('should reset field array fine with empty value', async () => {
@@ -342,15 +405,11 @@ describe('reset', () => {
         >
           {fields.map((field, index) => (
             <div key={field.id}>
-              <input
-                {...register(`test.${index}.firstName` as const)}
-                defaultValue={field.firstName}
-              />
+              <input {...register(`test.${index}.firstName` as const)} />
               <Controller
                 control={control}
                 name={`test.${index}.lastName` as const}
                 render={({ field }) => <input {...field} />}
-                defaultValue={field.lastName}
               />
             </div>
           ))}
@@ -393,5 +452,320 @@ describe('reset', () => {
     await expect(data).toEqual({
       test: [{ firstName: 'test', lastName: 'test' }],
     });
+  });
+
+  it('should return reset nested value', () => {
+    const getValuesResult: unknown[] = [];
+
+    function App() {
+      const [, update] = React.useState({});
+      const { register, reset, getValues } = useForm<{
+        names: { name: string }[];
+      }>({
+        defaultValues: {
+          names: [{ name: 'test' }],
+        },
+      });
+
+      React.useEffect(() => {
+        reset({ names: [{ name: 'Bill' }, { name: 'Luo' }] });
+      }, [reset]);
+
+      getValuesResult.push(getValues());
+
+      return (
+        <form>
+          <input {...register('names.0.name')} placeholder="Name" />
+          <button type={'button'} onClick={() => update({})}>
+            update
+          </button>
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(getValuesResult).toMatchSnapshot();
+  });
+
+  it('should keep defaultValues after reset with shouldKeepDefaultValues', async () => {
+    type FormValues = { test: string; test1: string };
+    const ControlledInput = ({ control }: { control: Control<FormValues> }) => {
+      const { field } = useController({
+        name: 'test',
+        control,
+      });
+
+      return <input {...field} />;
+    };
+
+    function App() {
+      const { control, register, reset } = useForm<FormValues>({
+        defaultValues: { test: 'test', test1: 'test1' },
+      });
+      const resetData = () => {
+        reset({}, { keepDefaultValues: true });
+      };
+
+      return (
+        <form>
+          <ControlledInput control={control} />
+          <input {...register('test1')} />
+          <input type="button" onClick={resetData} value="Reset" />
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.change(screen.getAllByRole('textbox')[0], {
+      target: { value: 'data' },
+    });
+
+    fireEvent.change(screen.getAllByRole('textbox')[1], {
+      target: { value: 'data' },
+    });
+
+    await actComponent(async () => {
+      fireEvent.click(screen.getByRole('button'));
+    });
+
+    expect(
+      (screen.getAllByRole('textbox')[0] as HTMLInputElement).value,
+    ).toEqual('test');
+    expect(
+      (screen.getAllByRole('textbox')[1] as HTMLInputElement).value,
+    ).toEqual('test1');
+  });
+
+  it('should allow to reset unmounted field array', () => {
+    type FormValues = {
+      test: { name: string }[];
+    };
+
+    const FieldArray = ({
+      control,
+      register,
+    }: {
+      control: Control<FormValues>;
+      register: UseFormRegister<FormValues>;
+    }) => {
+      const { fields, append } = useFieldArray({
+        control,
+        name: 'test',
+      });
+
+      return (
+        <div>
+          {fields.map((field, index) => {
+            return (
+              <input
+                key={field.id}
+                {...register(`test.${index}.name` as const)}
+              />
+            );
+          })}
+          <button
+            onClick={() => {
+              append({ name: '' });
+            }}
+          >
+            append
+          </button>
+        </div>
+      );
+    };
+
+    const App = () => {
+      const [show, setShow] = React.useState(true);
+      const { control, register, reset } = useForm<FormValues>();
+
+      return (
+        <div>
+          {show && <FieldArray control={control} register={register} />}
+          <button
+            onClick={() => {
+              setShow(!show);
+            }}
+          >
+            toggle
+          </button>
+          <button
+            onClick={() => {
+              reset({
+                test: [{ name: 'test' }],
+              });
+            }}
+          >
+            reset
+          </button>
+        </div>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
+
+    expect(screen.getAllByRole('textbox').length).toEqual(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'reset' }));
+    fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
+
+    expect(screen.getAllByRole('textbox').length).toEqual(1);
+  });
+
+  it('should only return register input when reset is invoked with shouldUnregister:true', async () => {
+    let submittedData = {};
+
+    const App = () => {
+      const { reset, handleSubmit } = useForm({
+        defaultValues: {
+          test: 'bill',
+        },
+        shouldUnregister: true,
+      });
+
+      return (
+        <form
+          onSubmit={handleSubmit((data) => {
+            submittedData = data;
+          })}
+        >
+          <button>submit</button>
+          <button
+            type={'button'}
+            onClick={() => {
+              reset({
+                test: '1234',
+              });
+            }}
+          >
+            reset
+          </button>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    await actComponent(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+    });
+
+    expect(submittedData).toEqual({});
+
+    await actComponent(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'reset' }));
+    });
+
+    await actComponent(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+    });
+
+    expect(submittedData).toEqual({});
+  });
+
+  it('should keep input values when keepValues is set to true', () => {
+    function App() {
+      const { register, handleSubmit, reset } = useForm();
+      const [show, setShow] = React.useState(true);
+
+      return (
+        <form onSubmit={handleSubmit(() => {})}>
+          <input {...register('firstName')} placeholder="First Name" />
+          {show && <input {...register('lastName')} placeholder="Last Name" />}
+          <button
+            type="button"
+            onClick={() => {
+              reset({}, { keepValues: true });
+            }}
+          >
+            reset
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShow(!show);
+            }}
+          >
+            toggle
+          </button>
+          <input type="submit" />
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.change(screen.getAllByRole('textbox')[0], {
+      target: { value: 'test' },
+    });
+    fireEvent.change(screen.getAllByRole('textbox')[1], {
+      target: { value: 'test' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'reset' }));
+    fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
+
+    expect(
+      (screen.getAllByRole('textbox')[1] as HTMLInputElement).value,
+    ).toEqual('test');
+  });
+
+  it('should not update isMounted when isValid is subscribed', async () => {
+    const mounted: unknown[] = [];
+
+    const App = () => {
+      const { control, reset } = useForm();
+
+      mounted.push(control._stateFlags.mount);
+
+      React.useEffect(() => {
+        reset({});
+      }, [reset]);
+
+      return <form />;
+    };
+
+    render(<App />);
+
+    expect(mounted).toEqual([false, true]);
+  });
+
+  it('should update isMounted when isValid is subscribed', async () => {
+    const mounted: unknown[] = [];
+
+    const App = () => {
+      const {
+        control,
+        reset,
+        formState: { isValid },
+      } = useForm();
+
+      mounted.push(control._stateFlags.mount);
+
+      React.useEffect(() => {
+        reset({});
+      }, [reset]);
+
+      return (
+        <form>
+          <p>{isValid ? 'true' : 'false'}</p>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    await waitFor(() => {
+      screen.getByText('false');
+    });
+
+    expect(mounted).toEqual([false, false, true]);
   });
 });

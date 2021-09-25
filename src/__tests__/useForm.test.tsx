@@ -1,7 +1,4 @@
-import 'jest-performance-testing';
-
 import * as React from 'react';
-import { perf, PerfTools, wait } from 'react-performance-testing';
 import {
   act as actComponent,
   fireEvent,
@@ -56,6 +53,7 @@ describe('useForm', () => {
         }>(),
       );
 
+      result.current.formState.errors;
       result.current.register('test', { required: true });
 
       await act(async () => {
@@ -79,6 +77,7 @@ describe('useForm', () => {
         }>(),
       );
 
+      result.current.formState.errors;
       result.current.register('test', { required: true });
 
       await act(async () => {
@@ -139,6 +138,7 @@ describe('useForm', () => {
         formState = tempFormState;
 
         formState.isDirty;
+        formState.dirtyFields;
 
         return <input {...register('test', { required: true })} />;
       };
@@ -158,75 +158,31 @@ describe('useForm', () => {
       expect(formState.dirtyFields.test).toBeDefined();
       expect(formState.isDirty).toBeTruthy();
     });
-  });
 
-  describe('when shouldUnregister set to true', () => {
-    type FormValues = {
-      test: string;
-      test1: string;
-      test2: {
-        value: string;
-      }[];
-    };
-
-    const Child = ({
-      control,
-      register,
-    }: {
-      control: Control<FormValues>;
-      register: UseFormRegister<FormValues>;
-    }) => {
-      const { fields } = useFieldArray({
-        control,
-        name: 'test2',
-        shouldUnregister: true,
-      });
-
-      return (
-        <>
-          {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test2.${i}.value` as const)}
-              defaultValue={field.value}
-            />
-          ))}
-        </>
-      );
-    };
-
-    it('should remove and unregister inputs when inputs gets unmounted', async () => {
-      let submittedData: FormValues[] = [];
-      submittedData = [];
-
+    it('should only validate input which are mounted even with shouldUnregister: false', async () => {
       const Component = () => {
         const [show, setShow] = React.useState(true);
-        const { register, handleSubmit, control } = useForm<FormValues>({
-          shouldUnregister: true,
-          defaultValues: {
-            test: 'bill',
-            test1: 'bill1',
-            test2: [{ value: 'bill2' }],
-          },
-        });
+        const {
+          handleSubmit,
+          register,
+          formState: { errors },
+        } = useForm<{
+          firstName: string;
+          lastName: string;
+        }>();
 
         return (
-          <form onSubmit={handleSubmit((data) => submittedData.push(data))}>
-            {show && (
-              <>
-                <input {...register('test')} />
-                <Controller
-                  control={control}
-                  render={({ field }) => <input {...field} />}
-                  name={'test1'}
-                />
-                <Child control={control} register={register} />
-              </>
-            )}
-            <button>Submit</button>
-            <button type={'button'} onClick={() => setShow(false)}>
-              Toggle
+          <form onSubmit={handleSubmit(() => {})}>
+            {show && <input {...register('firstName', { required: true })} />}
+            {errors.firstName && <p>First name is required.</p>}
+
+            <input {...register('lastName', { required: true })} />
+            {errors.lastName && <p>Last name is required.</p>}
+
+            <button type={'button'} onClick={() => setShow(!show)}>
+              toggle
             </button>
+            <button type={'submit'}>submit</button>
           </form>
         );
       };
@@ -234,18 +190,251 @@ describe('useForm', () => {
       render(<Component />);
 
       await actComponent(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+        fireEvent.click(screen.getByRole('button', { name: 'submit' }));
       });
 
-      actComponent(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'Toggle' }));
+      screen.getByText('First name is required.');
+      screen.getByText('Last name is required.');
+
+      await actComponent(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'toggle' }));
       });
+
+      await actComponent(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+      });
+
+      screen.getByText('Last name is required.');
+
+      expect(screen.queryByText('First name is required.')).toBeNull();
+    });
+  });
+
+  describe('when shouldUnregister set to true', () => {
+    describe('with useFieldArray', () => {
+      type FormValues = {
+        test: string;
+        test1: string;
+        test2: {
+          value: string;
+        }[];
+      };
+
+      const Child = ({
+        control,
+        register,
+      }: {
+        control: Control<FormValues>;
+        register: UseFormRegister<FormValues>;
+      }) => {
+        const { fields } = useFieldArray({
+          control,
+          name: 'test2',
+          shouldUnregister: true,
+        });
+
+        return (
+          <>
+            {fields.map((field, i) => (
+              <input
+                key={field.id}
+                {...register(`test2.${i}.value` as const)}
+              />
+            ))}
+          </>
+        );
+      };
+
+      it('should remove and unregister inputs when inputs gets unmounted', async () => {
+        const submittedData: FormValues[] = [];
+
+        const Component = () => {
+          const [show, setShow] = React.useState(true);
+          const { register, handleSubmit, control } = useForm<FormValues>({
+            shouldUnregister: true,
+            defaultValues: {
+              test: 'bill',
+              test1: 'bill1',
+              test2: [{ value: 'bill2' }],
+            },
+          });
+
+          return (
+            <form onSubmit={handleSubmit((data) => submittedData.push(data))}>
+              {show && (
+                <>
+                  <input {...register('test')} />
+                  <Controller
+                    control={control}
+                    render={({ field }) => <input {...field} />}
+                    name={'test1'}
+                  />
+                  <Child control={control} register={register} />
+                </>
+              )}
+              <button>Submit</button>
+              <button type={'button'} onClick={() => setShow(false)}>
+                Toggle
+              </button>
+            </form>
+          );
+        };
+
+        render(<Component />);
+
+        await actComponent(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+        });
+
+        actComponent(() => {
+          fireEvent.click(screen.getByRole('button', { name: 'Toggle' }));
+        });
+
+        await actComponent(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+        });
+
+        expect(submittedData).toMatchSnapshot();
+      });
+    });
+
+    it('should not register or shallow defaultValues into submission data', () => {
+      let data = {};
+
+      const App = () => {
+        const { handleSubmit } = useForm({
+          defaultValues: {
+            test: 'test',
+          },
+        });
+
+        return (
+          <button
+            onClick={handleSubmit((d) => {
+              data = d;
+            })}
+          >
+            sumbit
+          </button>
+        );
+      };
+
+      render(<App />);
+
+      actComponent(() => {
+        fireEvent.click(screen.getByRole('button'));
+      });
+
+      expect(data).toEqual({});
+    });
+
+    it('should keep validation during unmount', async () => {
+      function Component() {
+        const {
+          register,
+          handleSubmit,
+          watch,
+          formState: { errors },
+        } = useForm<{
+          firstName: string;
+          moreDetail: boolean;
+        }>({
+          shouldUnregister: true,
+        });
+        const moreDetail = watch('moreDetail');
+
+        return (
+          <form onSubmit={handleSubmit(() => {})}>
+            <input
+              placeholder="firstName"
+              {...register('firstName', { maxLength: 3 })}
+            />
+            {errors.firstName && <p>max length</p>}
+            <input
+              type="checkbox"
+              {...register('moreDetail')}
+              placeholder={'checkbox'}
+            />
+
+            {moreDetail && <p>show more</p>}
+            <button>Submit</button>
+          </form>
+        );
+      }
+
+      render(<Component />);
+
+      fireEvent.change(screen.getByPlaceholderText('firstName'), {
+        target: {
+          value: 'testtesttest',
+        },
+      });
+
+      await actComponent(async () => {
+        fireEvent.click(screen.getByRole('button'));
+      });
+
+      screen.getByText('max length');
+
+      fireEvent.click(screen.getByPlaceholderText('checkbox'));
+
+      await actComponent(async () => {
+        fireEvent.click(screen.getByRole('button'));
+      });
+
+      screen.getByText('max length');
+    });
+
+    it('should only unregister inputs when all checkboxes are unmounted', async () => {
+      let result;
+
+      const Component = () => {
+        const { register, handleSubmit } = useForm({
+          shouldUnregister: true,
+        });
+        const [radio1, setRadio1] = React.useState(true);
+        const [radio2, setRadio2] = React.useState(true);
+
+        return (
+          <form
+            onSubmit={handleSubmit((data) => {
+              result = data;
+            })}
+          >
+            {radio1 && (
+              <input {...register('test')} type={'radio'} value={'1'} />
+            )}
+            {radio2 && (
+              <input {...register('test')} type={'radio'} value={'2'} />
+            )}
+            <button type={'button'} onClick={() => setRadio1(!radio1)}>
+              setRadio1
+            </button>
+            <button type={'button'} onClick={() => setRadio2(!radio2)}>
+              setRadio2
+            </button>
+            <button>Submit</button>
+          </form>
+        );
+      };
+
+      render(<Component />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'setRadio1' }));
 
       await actComponent(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
       });
 
-      expect(submittedData).toMatchSnapshot();
+      expect(result).toEqual({ test: null });
+
+      fireEvent.click(screen.getByRole('button', { name: 'setRadio2' }));
+
+      await actComponent(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+      });
+
+      expect(result).toEqual({});
     });
   });
 
@@ -301,7 +490,6 @@ describe('useForm', () => {
   });
 
   describe('handleChangeRef', () => {
-    let renderCount: PerfTools<{ Component: unknown }>['renderCount'];
     let Component: React.FC<{
       name?: string;
       resolver?: any;
@@ -329,7 +517,7 @@ describe('useForm', () => {
         const {
           register,
           handleSubmit,
-          formState: { errors },
+          formState: { errors, isValid },
         } = internationalMethods;
         methods = internationalMethods;
 
@@ -343,12 +531,10 @@ describe('useForm', () => {
               {errors?.test?.message && errors.test.message}
             </span>
             <button onClick={handleSubmit(() => {})}>button</button>
+            <p>{isValid ? 'valid' : 'invalid'}</p>
           </div>
         );
       };
-
-      const tools = perf<{ Component: unknown }>(React);
-      renderCount = tools.renderCount;
     });
 
     describe('onSubmit mode', () => {
@@ -360,21 +546,18 @@ describe('useForm', () => {
         });
 
         await actComponent(async () => {
-          await fireEvent.click(screen.getByRole('button'));
+          fireEvent.click(screen.getByRole('button'));
         });
 
         expect(screen.getByRole('alert').textContent).toBe('');
 
         await actComponent(async () => {
-          await fireEvent.input(screen.getByRole('textbox'), {
+          fireEvent.input(screen.getByRole('textbox'), {
             target: { name: 'test', value: 'test' },
           });
         });
 
         expect(screen.getByRole('alert').textContent).toBe('');
-        await wait(() =>
-          expect(renderCount.current.Component).toBeRenderedTimes(3),
-        );
       });
 
       it('should not contain error if name is invalid', async () => {
@@ -385,21 +568,18 @@ describe('useForm', () => {
         });
 
         await actComponent(async () => {
-          await fireEvent.click(screen.getByRole('button'));
+          fireEvent.click(screen.getByRole('button'));
         });
 
         expect(screen.getByRole('alert').textContent).toBe('');
 
         await actComponent(async () => {
-          await fireEvent.input(screen.getByRole('textbox'), {
+          fireEvent.input(screen.getByRole('textbox'), {
             target: { name: 'wrongName', value: '' },
           });
         });
 
         expect(screen.getByRole('alert').textContent).toBe('');
-        await wait(() =>
-          expect(renderCount.current.Component).toBeRenderedTimes(3),
-        );
       });
 
       it('should contain error if value is invalid with revalidateMode is onChange', async () => {
@@ -410,7 +590,7 @@ describe('useForm', () => {
         fireEvent.input(input, { target: { name: 'test', value: 'test' } });
 
         await actComponent(async () => {
-          await fireEvent.click(screen.getByRole('button'));
+          fireEvent.click(screen.getByRole('button'));
         });
 
         expect(screen.getByRole('alert').textContent).toBe('');
@@ -419,10 +599,6 @@ describe('useForm', () => {
 
         await waitFor(() =>
           expect(screen.getByRole('alert').textContent).toBe('required'),
-        );
-
-        await wait(() =>
-          expect(renderCount.current.Component).toBeRenderedTimes(4),
         );
       });
 
@@ -440,13 +616,10 @@ describe('useForm', () => {
         );
 
         await actComponent(async () => {
-          await fireEvent.input(input, { target: { name: 'test', value: '' } });
+          fireEvent.input(input, { target: { name: 'test', value: '' } });
         });
 
         expect(screen.getByRole('alert').textContent).toBe('required');
-        await wait(() =>
-          expect(renderCount.current.Component).toBeRenderedTimes(2),
-        );
       });
 
       it('should set name to formState.touchedFields when formState.touchedFields is defined', async () => {
@@ -455,7 +628,7 @@ describe('useForm', () => {
         methods.formState.touchedFields;
 
         await actComponent(async () => {
-          await fireEvent.click(screen.getByRole('button'));
+          fireEvent.click(screen.getByRole('button'));
         });
 
         fireEvent.blur(screen.getByRole('textbox'), {
@@ -468,9 +641,6 @@ describe('useForm', () => {
           }),
         );
         expect(screen.getByRole('alert').textContent).toBe('');
-        await wait(() =>
-          expect(renderCount.current.Component).toBeRenderedTimes(4),
-        );
       });
 
       // check https://github.com/react-hook-form/react-hook-form/issues/2153
@@ -503,13 +673,11 @@ describe('useForm', () => {
         });
 
         await actComponent(async () => {
-          await fireEvent.click(
-            screen.getByRole('button', { name: /submit/i }),
-          );
+          fireEvent.click(screen.getByRole('button', { name: /submit/i }));
         });
 
         await actComponent(async () => {
-          await fireEvent.input(screen.getByRole('textbox'), {
+          fireEvent.input(screen.getByRole('textbox'), {
             target: { value: '' },
           });
         });
@@ -517,7 +685,7 @@ describe('useForm', () => {
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
         await actComponent(async () => {
-          await fireEvent.blur(screen.getByRole('textbox'));
+          fireEvent.blur(screen.getByRole('textbox'));
         });
 
         expect(screen.queryByRole('alert')).toBeInTheDocument();
@@ -599,7 +767,7 @@ describe('useForm', () => {
         render(<Component mode="onBlur" />);
 
         await actComponent(async () => {
-          await fireEvent.input(screen.getByRole('textbox'), {
+          fireEvent.input(screen.getByRole('textbox'), {
             target: {
               value: '',
             },
@@ -730,7 +898,7 @@ describe('useForm', () => {
         methods.formState.isValid;
 
         await actComponent(async () => {
-          await fireEvent.input(screen.getByRole('textbox'), {
+          fireEvent.input(screen.getByRole('textbox'), {
             target: { name: 'test', value: 'test' },
           });
         });
@@ -739,7 +907,7 @@ describe('useForm', () => {
         expect(methods.formState.isValid).toBeTruthy();
 
         await actComponent(async () => {
-          await fireEvent.input(screen.getByRole('textbox'), {
+          fireEvent.input(screen.getByRole('textbox'), {
             target: { name: 'test', value: '' },
           });
         });
@@ -747,9 +915,6 @@ describe('useForm', () => {
         await waitFor(() => expect(resolver).toHaveBeenCalled());
         expect(screen.getByRole('alert').textContent).toBe('resolver error');
         expect(methods.formState.isValid).toBeFalsy();
-        await wait(() =>
-          expect(renderCount.current.Component).toBeRenderedTimes(2),
-        );
       });
 
       it('with sync resolver it should contain error if value is invalid with resolver', async () => {
@@ -772,7 +937,7 @@ describe('useForm', () => {
         methods.formState.isValid;
 
         await actComponent(async () => {
-          await fireEvent.input(screen.getByRole('textbox'), {
+          fireEvent.input(screen.getByRole('textbox'), {
             target: { name: 'test', value: 'test' },
           });
         });
@@ -786,10 +951,10 @@ describe('useForm', () => {
 
         await waitFor(() => expect(resolver).toHaveBeenCalled());
         expect(screen.getByRole('alert').textContent).toBe('resolver error');
-        expect(methods.formState.isValid).toBeFalsy();
-        await wait(() =>
-          expect(renderCount.current.Component).toBeRenderedTimes(2),
-        );
+
+        await waitFor(() => {
+          screen.getByText('invalid');
+        });
       });
 
       it('should make isValid change to false if it contain error that is not related name with onChange mode', async () => {
@@ -812,7 +977,7 @@ describe('useForm', () => {
         methods.formState.isValid;
 
         await actComponent(async () => {
-          await fireEvent.input(screen.getByRole('textbox'), {
+          fireEvent.input(screen.getByRole('textbox'), {
             target: { name: 'test', value: 'test' },
           });
         });
@@ -827,19 +992,16 @@ describe('useForm', () => {
         await waitFor(() => expect(resolver).toHaveBeenCalled());
         expect(screen.getByRole('alert').textContent).toBe('');
         expect(methods.formState.isValid).toBeFalsy();
-        await wait(() =>
-          expect(renderCount.current.Component).toBeRenderedTimes(2),
-        );
       });
 
       it("should call the resolver with the field being validated when an input's value change", async () => {
         const resolver = jest.fn((values: any) => ({ values, errors: {} }));
 
         render(<Component resolver={resolver} mode="onChange" />);
-        expect(resolver).not.toHaveBeenCalled();
+        expect(resolver).toHaveBeenCalled();
 
         await actComponent(async () => {
-          await fireEvent.input(screen.getByRole('textbox'), {
+          fireEvent.input(screen.getByRole('textbox'), {
             target: { name: 'test', value: 'test' },
           });
         });
@@ -847,7 +1009,7 @@ describe('useForm', () => {
         expect(resolver.mock.calls).toMatchSnapshot();
 
         await actComponent(async () => {
-          await fireEvent.click(screen.getByText(/button/i));
+          fireEvent.click(screen.getByText(/button/i));
         });
         expect(resolver.mock.calls[1]).toMatchSnapshot();
       });
@@ -879,25 +1041,24 @@ describe('useForm', () => {
         const fields = {
           test: {
             sub: {
+              mount: true,
               name: 'test.sub',
-              ref: { name: 'test.sub', value: 'test' },
-              value: 'test',
+              ref: { name: 'test.sub' },
             },
           },
           test1: {
+            mount: true,
             name: 'test1',
             ref: {
               name: 'test1',
-              value: 'test1',
             },
-            value: 'test1',
           },
         };
 
         expect(resolver).toHaveBeenCalledWith(defaultValues, undefined, {
           criteriaMode: undefined,
           fields,
-          names: ['test.sub'],
+          names: ['test.sub', 'test1'],
         });
 
         // `trigger` called to validate all fields
@@ -908,7 +1069,7 @@ describe('useForm', () => {
         expect(resolver).toHaveBeenNthCalledWith(2, defaultValues, undefined, {
           criteriaMode: undefined,
           fields,
-          names: [],
+          names: ['test.sub', 'test1'],
         });
 
         // `trigger` called to validate fields
@@ -925,7 +1086,7 @@ describe('useForm', () => {
     });
   });
 
-  describe('updateIsValid', () => {
+  describe('updateValid', () => {
     it('should be called resolver with default values if default value is defined', async () => {
       type FormValues = {
         test: string;
@@ -967,6 +1128,7 @@ describe('useForm', () => {
           criteriaMode: undefined,
           fields: {
             test: {
+              mount: true,
               name: 'test',
               ref: {
                 target: {
@@ -974,10 +1136,9 @@ describe('useForm', () => {
                 },
                 value: 'default',
               },
-              value: 'default',
             },
           },
-          names: [],
+          names: ['test'],
         },
       );
     });
@@ -1010,12 +1171,12 @@ describe('useForm', () => {
         criteriaMode: undefined,
         fields: {
           test: {
+            mount: true,
             name: 'test',
             ref: { name: 'test', value: 'value' },
-            value: 'value',
           },
         },
-        names: [],
+        names: ['test'],
       });
     });
   });
@@ -1048,13 +1209,13 @@ describe('useForm', () => {
       screen.getByRole('textbox').focus();
 
       await actComponent(async () => {
-        await fireEvent.blur(screen.getByRole('textbox'));
+        fireEvent.blur(screen.getByRole('textbox'));
       });
 
       expect(screen.queryByText('This is required.')).toBeInTheDocument();
 
       await actComponent(async () => {
-        await fireEvent.input(screen.getByRole('textbox'), {
+        fireEvent.input(screen.getByRole('textbox'), {
           target: {
             value: 'test',
           },
@@ -1128,7 +1289,7 @@ describe('useForm', () => {
       fireEvent.click(screen.getByLabelText('checkbox.0'));
 
       await actComponent(async () => {
-        await fireEvent.click(screen.getByLabelText('checkbox.0'));
+        fireEvent.click(screen.getByLabelText('checkbox.0'));
       });
 
       expect(errorsObject).toEqual({
@@ -1136,13 +1297,13 @@ describe('useForm', () => {
       });
 
       await actComponent(async () => {
-        await fireEvent.click(screen.getByLabelText('checkbox.0'));
+        fireEvent.click(screen.getByLabelText('checkbox.0'));
       });
 
       expect(errorsObject).toEqual({});
 
       await actComponent(async () => {
-        await fireEvent.click(screen.getByLabelText('checkbox.0'));
+        fireEvent.click(screen.getByLabelText('checkbox.0'));
       });
 
       await actComponent(async () => {
@@ -1154,10 +1315,86 @@ describe('useForm', () => {
       });
 
       await actComponent(async () => {
-        await fireEvent.click(screen.getByLabelText('checkbox.0'));
+        fireEvent.click(screen.getByLabelText('checkbox.0'));
       });
 
       expect(errorsObject).toEqual({});
+    });
+
+    it('should not clear errors for non checkbox parent inputs', async () => {
+      let errorsObject = {};
+
+      const Component = () => {
+        const {
+          formState: { errors },
+          register,
+          handleSubmit,
+        } = useForm<{
+          checkbox: [{ test: string }, { test1: string }];
+        }>({
+          mode: 'onChange',
+          resolver: (data) => {
+            return {
+              errors: {
+                ...(!data.checkbox[0].test || !data.checkbox[1].test1
+                  ? {
+                      checkbox: [
+                        {
+                          ...(!data.checkbox[0].test
+                            ? { test: { type: 'error', message: 'wrong' } }
+                            : {}),
+                          ...(!data.checkbox[1].test1
+                            ? { test1: { type: 'error', message: 'wrong' } }
+                            : {}),
+                        },
+                      ],
+                    }
+                  : {}),
+              },
+              values: {},
+            };
+          },
+        });
+        errorsObject = errors;
+
+        return (
+          <form onSubmit={handleSubmit(() => {})}>
+            <input type={'checkbox'} {...register(`checkbox.0.test`)} />
+
+            <input {...register(`checkbox.1.test1`)} />
+            <button>Submit</button>
+          </form>
+        );
+      };
+
+      render(<Component />);
+
+      await actComponent(async () => {
+        fireEvent.click(screen.getByRole('button'));
+      });
+
+      expect(errorsObject).toEqual({
+        checkbox: [
+          {
+            test: { type: 'error', message: 'wrong' },
+            test1: { type: 'error', message: 'wrong' },
+          },
+        ],
+      });
+
+      fireEvent.click(screen.getByRole('checkbox'));
+
+      await actComponent(async () => {
+        fireEvent.click(screen.getByRole('button'));
+      });
+
+      expect(errorsObject).toEqual({
+        checkbox: [
+          {
+            test1: { type: 'error', message: 'wrong' },
+          },
+        ],
+      });
     });
 
     it('should have formState.isValid equals true with defined default values after executing resolver', async () => {
@@ -1244,6 +1481,20 @@ describe('useForm', () => {
       const secondRenderControl = control;
 
       expect(Object.is(firstRenderControl, secondRenderControl)).toBe(true);
+    });
+  });
+
+  describe('when input is not registered', () => {
+    it('trigger should not throw warn', async () => {
+      const { result } = renderHook(() =>
+        useForm<{
+          test: string;
+        }>(),
+      );
+
+      await act(async () =>
+        expect(await result.current.trigger('test')).toBeTruthy(),
+      );
     });
   });
 });

@@ -1,7 +1,7 @@
-import { RegisterOptions } from '../types';
+import { Field } from '../types';
 
-export default <T extends RegisterOptions>(options?: T) =>
-  options &&
+export default (options: Field['_f']) =>
+  options.mount &&
   (options.required ||
     options.min ||
     options.max ||

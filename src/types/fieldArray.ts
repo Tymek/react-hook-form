@@ -4,12 +4,10 @@ import { FieldArrayPath, FieldArrayPathValue } from './utils';
 
 export type FieldArrayName = string;
 
-export type FieldArrayDefaultValues = Partial<Record<FieldArrayName, any>>;
-
 export type UseFieldArrayProps<
   TFieldValues extends FieldValues = FieldValues,
   TFieldArrayName extends FieldArrayPath<TFieldValues> = FieldArrayPath<TFieldValues>,
-  TKeyName extends string = 'id'
+  TKeyName extends string = 'id',
 > = {
   name: TFieldArrayName;
   keyName?: TKeyName;
@@ -20,12 +18,12 @@ export type UseFieldArrayProps<
 export type FieldArrayWithId<
   TFieldValues extends FieldValues = FieldValues,
   TFieldArrayName extends FieldArrayPath<TFieldValues> = FieldArrayPath<TFieldValues>,
-  TKeyName extends string = 'id'
+  TKeyName extends string = 'id',
 > = FieldArray<TFieldValues, TFieldArrayName> & Record<TKeyName, string>;
 
 export type FieldArray<
   TFieldValues extends FieldValues = FieldValues,
-  TFieldArrayName extends FieldArrayPath<TFieldValues> = FieldArrayPath<TFieldValues>
+  TFieldArrayName extends FieldArrayPath<TFieldValues> = FieldArrayPath<TFieldValues>,
 > = FieldArrayPathValue<TFieldValues, TFieldArrayName> extends ReadonlyArray<
   infer U
 >
@@ -41,7 +39,7 @@ export type FieldArrayMethodProps = {
 export type UseFieldArrayReturn<
   TFieldValues extends FieldValues = FieldValues,
   TFieldArrayName extends FieldArrayPath<TFieldValues> = FieldArrayPath<TFieldValues>,
-  TKeyName extends string = 'id'
+  TKeyName extends string = 'id',
 > = {
   swap: (indexA: number, indexB: number) => void;
   move: (indexA: number, indexB: number) => void;
@@ -64,6 +62,15 @@ export type UseFieldArrayReturn<
       | Partial<FieldArray<TFieldValues, TFieldArrayName>>
       | Partial<FieldArray<TFieldValues, TFieldArrayName>>[],
     options?: FieldArrayMethodProps,
+  ) => void;
+  update: (
+    index: number,
+    value: Partial<FieldArray<TFieldValues, TFieldArrayName>>,
+  ) => void;
+  replace: (
+    value:
+      | Partial<FieldArray<TFieldValues, TFieldArrayName>>
+      | Partial<FieldArray<TFieldValues, TFieldArrayName>>[],
   ) => void;
   fields: FieldArrayWithId<TFieldValues, TFieldArrayName, TKeyName>[];
 };

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { render } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { renderHook } from '@testing-library/react-hooks';
 
 import { useForm } from '../../useForm';
@@ -189,5 +189,67 @@ describe('getValues', () => {
     render(<Component />);
 
     expect(data).toEqual({ test: 'test' });
+  });
+
+  it('should return defaultValues deep merge with form values', async () => {
+    let data: unknown;
+
+    const Component = () => {
+      const { getValues, register } = useForm({
+        defaultValues: {
+          test: {
+            firstName: 'test',
+            lastName: 'test',
+            time: new Date('1999-09-09'),
+            file: new File([''], 'filename'),
+          },
+        },
+      });
+
+      if (!data) {
+        data = getValues();
+      }
+
+      return (
+        <div>
+          <input {...register('test.firstName')} />
+          <button
+            onClick={() => {
+              data = getValues();
+            }}
+          >
+            getValues
+          </button>
+        </div>
+      );
+    };
+
+    render(<Component />);
+
+    expect(data).toEqual({
+      test: {
+        firstName: 'test',
+        lastName: 'test',
+        time: new Date('1999-09-09'),
+        file: new File([''], 'filename'),
+      },
+    });
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: {
+        value: '1234',
+      },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button'));
+    });
+
+    expect(data).toMatchObject({
+      test: {
+        firstName: '1234',
+        lastName: 'test',
+      },
+    });
   });
 });

@@ -1,6 +1,10 @@
 import * as React from 'react';
-import { perf } from 'react-performance-testing';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act as actComponent,
+  fireEvent,
+  render,
+  screen,
+} from '@testing-library/react';
 import { act, renderHook } from '@testing-library/react-hooks';
 
 import { VALIDATION_MODE } from '../../constants';
@@ -82,39 +86,6 @@ describe('handleSubmit', () => {
     });
   });
 
-  it('should invoke reRender method when readFormStateRef.current.isSubmitting is true', async () => {
-    const Component = () => {
-      const { register, handleSubmit, formState } = useForm<{
-        test: string;
-      }>();
-      return (
-        <div>
-          <input {...register('test')} />
-          <button onClick={handleSubmit(() => {})}></button>
-          <span role="alert">{formState.isSubmitting ? 'true' : 'false'}</span>
-        </div>
-      );
-    };
-
-    const { renderCount } = perf<{ Component: unknown }>(React);
-
-    render(<Component />);
-
-    fireEvent.click(screen.getByRole('button'));
-
-    const span = screen.getByRole('alert')!;
-    await waitFor(
-      () => {
-        if (renderCount.current.Component?.value === 2) {
-          expect(span.textContent).toBe('true');
-        } else {
-          expect(span.textContent).toBe('false');
-        }
-      },
-      { container: span },
-    );
-  });
-
   it('should not invoke callback when there are errors', async () => {
     const { result } = renderHook(() => useForm<{ test: string }>());
 
@@ -136,6 +107,8 @@ describe('handleSubmit', () => {
     const { result } = renderHook(() => useForm<{ test: string }>());
     const { ref } = result.current.register('test', { required: true });
 
+    result.current.formState;
+
     isFunction(ref) &&
       ref({
         focus,
@@ -151,7 +124,9 @@ describe('handleSubmit', () => {
 
     expect(callback).not.toBeCalled();
     expect(focus).toBeCalled();
-    expect(result.current.formState.errors?.test?.type).toBe('required');
+    expect(result.current.control._formState.errors?.test?.type).toBe(
+      'required',
+    );
   });
 
   it('should not focus if shouldFocusError is false', async () => {
@@ -162,6 +137,7 @@ describe('handleSubmit', () => {
     );
 
     result.current.register('test', { required: true });
+    result.current.formState;
 
     const callback = jest.fn();
     await act(async () => {
@@ -173,7 +149,9 @@ describe('handleSubmit', () => {
 
     expect(callback).not.toBeCalled();
     expect(mockFocus).not.toBeCalled();
-    expect(result.current.formState.errors?.test?.type).toBe('required');
+    expect(result.current.control._formState.errors?.test?.type).toBe(
+      'required',
+    );
   });
 
   it('should submit form data when inputs are removed', async () => {
@@ -245,6 +223,41 @@ describe('handleSubmit', () => {
     });
 
     expect(callback).toBeCalled();
+  });
+
+  it('should bubble the error up when an error occurs in the provided handleSubmit function', async () => {
+    const errorMsg = 'this is an error';
+    const App = () => {
+      const [error, setError] = React.useState('');
+      const { register, handleSubmit } = useForm();
+
+      const rejectPromiseFn = jest.fn().mockRejectedValue(new Error(errorMsg));
+
+      return (
+        <form>
+          <input {...register('test')} />
+          <p>{error}</p>
+          <button
+            type={'button'}
+            onClick={() =>
+              handleSubmit(rejectPromiseFn)().catch((err) =>
+                setError(err.message),
+              )
+            }
+          >
+            Submit
+          </button>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    await actComponent(async () => {
+      fireEvent.click(screen.getByRole('button'));
+    });
+
+    screen.getByText(errorMsg);
   });
 
   describe('with validationSchema', () => {

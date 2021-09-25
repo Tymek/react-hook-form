@@ -19,12 +19,13 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', value: '', name: 'test' },
             required: true,
-            value: '',
           },
         },
+        '',
         false,
       ),
     ).toEqual({
@@ -39,11 +40,13 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', value: '', name: 'test' },
             required: 'required',
           },
         },
+        '',
         false,
       ),
     ).toEqual({
@@ -58,11 +61,13 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', value: '', name: 'test' },
             required: 'required',
           },
         },
+        '',
         false,
       ),
     ).toEqual({
@@ -77,6 +82,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', value: '', name: 'test' },
             required: {
@@ -85,6 +91,7 @@ describe('validateField', () => {
             },
           },
         },
+        '',
         false,
       ),
     ).toEqual({
@@ -99,6 +106,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', value: '', name: 'test' },
             required: {
@@ -107,6 +115,7 @@ describe('validateField', () => {
             },
           },
         },
+        '',
         false,
       ),
     ).toEqual({
@@ -121,6 +130,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', value: '', name: 'test' },
             required: {
@@ -129,6 +139,7 @@ describe('validateField', () => {
             },
           },
         },
+        '',
         false,
       ),
     ).toEqual({});
@@ -137,18 +148,20 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'radio', name: 'test' },
             required: true,
           },
         },
         false,
+        false,
       ),
     ).toEqual({
       test: {
         message: '',
         type: 'required',
-        ref: {},
+        ref: { type: 'radio', name: 'test' },
       },
     });
 
@@ -156,11 +169,13 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', value: '', name: 'test' },
             required: 'test',
           },
         },
+        '',
         false,
       ),
     ).toEqual({
@@ -175,18 +190,20 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'radio', value: '', name: 'test' },
             required: 'test',
           },
         },
+        '',
         false,
       ),
     ).toEqual({
       test: {
         message: 'test',
         type: 'required',
-        ref: {},
+        ref: { type: 'radio', name: 'test', value: '' },
       },
     });
 
@@ -194,18 +211,20 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'checkbox', name: 'test' },
             required: 'test',
           },
         },
         false,
+        false,
       ),
     ).toEqual({
       test: {
         message: 'test',
         type: 'required',
-        ref: {},
+        ref: { type: 'checkbox', name: 'test' },
       },
     });
 
@@ -213,12 +232,14 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', value: '0', name: 'test' },
             required: true,
             value: '0',
           },
         },
+        '0',
         false,
       ),
     ).toEqual({});
@@ -232,11 +253,13 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'checkbox', name: 'test' },
             required: 'test',
           },
         },
+        '',
         false,
       ),
     ).toEqual({});
@@ -245,6 +268,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             valueAsNumber: true,
             ref: { name: 'test', value: '' },
@@ -252,6 +276,7 @@ describe('validateField', () => {
             value: NaN,
           },
         },
+        '',
         false,
       ),
     ).toEqual({
@@ -269,12 +294,14 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { name: 'test', type: 'file', value: '' },
             required: true,
             value: {},
           },
         },
+        '',
         false,
       ),
     ).toEqual({
@@ -295,6 +322,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'number', name: 'test', valueAsNumber: 10 },
             value: 10,
@@ -302,6 +330,7 @@ describe('validateField', () => {
             max: 0,
           },
         },
+        10,
         false,
       ),
     ).toEqual({
@@ -316,6 +345,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'number', name: 'test', valueAsNumber: 10 },
             value: 10,
@@ -326,6 +356,7 @@ describe('validateField', () => {
             },
           },
         },
+        10,
         false,
       ),
     ).toEqual({
@@ -340,6 +371,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'number', name: 'test', valueAsNumber: 10 },
             required: true,
@@ -350,6 +382,7 @@ describe('validateField', () => {
             value: 10,
           },
         },
+        10,
         false,
       ),
     ).toEqual({
@@ -364,6 +397,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'number', name: 'test', valueAsNumber: 8 },
             value: 8,
@@ -371,6 +405,7 @@ describe('validateField', () => {
             max: 8,
           },
         },
+        8,
         false,
       ),
     ).toEqual({});
@@ -379,12 +414,14 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'number', name: 'test', valueAsNumber: 10 },
             value: 10,
             max: 8,
           },
         },
+        10,
         true,
       ),
     ).toEqual({
@@ -402,12 +439,14 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'custom', name: 'test', valueAsNumber: NaN },
             value: '',
             required: true,
           },
         },
+        '',
         false,
       ),
     ).toEqual({
@@ -422,6 +461,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'custom',
@@ -432,6 +472,7 @@ describe('validateField', () => {
             required: true,
           },
         },
+        undefined,
         false,
       ),
     ).toEqual({
@@ -451,6 +492,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'custom',
@@ -461,6 +503,7 @@ describe('validateField', () => {
             required: true,
           },
         },
+        null,
         false,
       ),
     ).toEqual({
@@ -475,12 +518,14 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'custom', name: 'test' },
             required: true,
             value: 'ok',
           },
         },
+        'ok',
         false,
       ),
     ).toEqual({});
@@ -489,6 +534,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'date',
@@ -499,6 +545,7 @@ describe('validateField', () => {
             max: '2019-1-12',
           },
         },
+        '2019-2-13',
         false,
       ),
     ).toEqual({
@@ -518,6 +565,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'number', name: 'test', valueAsNumber: -1 },
             value: -1,
@@ -525,6 +573,7 @@ describe('validateField', () => {
             min: 0,
           },
         },
+        -1,
         false,
       ),
     ).toEqual({
@@ -539,6 +588,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'number', name: 'test', valueAsNumber: -1 },
             value: -1,
@@ -549,6 +599,7 @@ describe('validateField', () => {
             },
           },
         },
+        -1,
         false,
       ),
     ).toEqual({
@@ -563,6 +614,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'number', name: 'test', valueAsNumber: -1 },
             value: -1,
@@ -573,6 +625,7 @@ describe('validateField', () => {
             },
           },
         },
+        -1,
         false,
       ),
     ).toEqual({
@@ -587,6 +640,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'number', name: 'test', valueAsNumber: 10 },
             value: 10,
@@ -594,6 +648,7 @@ describe('validateField', () => {
             min: 12,
           },
         },
+        10,
         false,
       ),
     ).toEqual({
@@ -608,6 +663,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'date',
@@ -619,6 +675,7 @@ describe('validateField', () => {
             min: '2019-3-12',
           },
         },
+        '2019-2-12',
         false,
       ),
     ).toEqual({
@@ -637,6 +694,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'date',
@@ -650,6 +708,7 @@ describe('validateField', () => {
             },
           },
         },
+        '2019-2-12',
         false,
       ),
     ).toEqual({
@@ -667,6 +726,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'date',
@@ -681,6 +741,7 @@ describe('validateField', () => {
             },
           },
         },
+        '2019-2-12',
         false,
       ),
     ).toEqual({
@@ -701,6 +762,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: '', name: 'test' },
             value: '1',
@@ -708,6 +770,7 @@ describe('validateField', () => {
             min: '4',
           },
         },
+        '1',
         false,
       ),
     ).toEqual({
@@ -722,6 +785,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: '', name: 'test' },
             value: '4',
@@ -729,6 +793,7 @@ describe('validateField', () => {
             max: '2',
           },
         },
+        '4',
         false,
       ),
     ).toEqual({
@@ -743,6 +808,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: '',
@@ -754,6 +820,7 @@ describe('validateField', () => {
             max: '2019-1-12',
           },
         },
+        '2019-2-12',
         false,
       ),
     ).toEqual({
@@ -774,6 +841,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -784,6 +852,7 @@ describe('validateField', () => {
             maxLength: 12,
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -801,6 +870,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -814,6 +884,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -831,6 +902,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -844,6 +916,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -863,6 +936,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -873,6 +947,7 @@ describe('validateField', () => {
             minLength: 200,
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -890,6 +965,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -903,6 +979,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -920,6 +997,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -933,6 +1011,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -948,12 +1027,14 @@ describe('validateField', () => {
   });
 
   it('should return pattern error when not matching', async () => {
-    const emailRegex = /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/;
+    const emailRegex =
+      /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/;
 
     expect(
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -964,6 +1045,7 @@ describe('validateField', () => {
             pattern: emailRegex,
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -981,6 +1063,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -994,6 +1077,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -1011,6 +1095,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1024,6 +1109,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -1041,6 +1127,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1051,6 +1138,7 @@ describe('validateField', () => {
             pattern: emailRegex,
           },
         },
+        'test@test.com',
         false,
       ),
     ).toEqual({});
@@ -1059,6 +1147,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1069,6 +1158,7 @@ describe('validateField', () => {
             pattern: emailRegex,
           },
         },
+        null,
         false,
       ),
     ).toEqual({});
@@ -1079,6 +1169,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1089,6 +1180,7 @@ describe('validateField', () => {
             validate: (value) => value.toString().length > 3,
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({});
@@ -1097,6 +1189,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1107,6 +1200,7 @@ describe('validateField', () => {
             validate: (value) => value.toString().length < 3,
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -1124,6 +1218,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1137,6 +1232,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -1161,6 +1257,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1173,6 +1270,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input!',
         false,
       ),
     ).toEqual({
@@ -1190,6 +1288,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'radio',
@@ -1203,6 +1302,7 @@ describe('validateField', () => {
             refs: [{ type: 'data' } as HTMLInputElement],
           },
         },
+        'This is a long text input!',
         false,
       ),
     ).toEqual({
@@ -1217,6 +1317,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'radio',
@@ -1233,6 +1334,7 @@ describe('validateField', () => {
             ],
           },
         },
+        'This is a long text input!',
         false,
       ),
     ).toEqual({});
@@ -1243,6 +1345,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1259,6 +1362,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -1276,6 +1380,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1292,6 +1397,7 @@ describe('validateField', () => {
             },
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -1311,6 +1417,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1320,6 +1427,7 @@ describe('validateField', () => {
             validate: (value) => value.toString().length < 3 || 'bill',
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -1337,6 +1445,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1346,6 +1455,7 @@ describe('validateField', () => {
             validate: (value) => value.toString().length < 3 || 'bill',
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({
@@ -1365,6 +1475,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1374,6 +1485,7 @@ describe('validateField', () => {
             validate: () => undefined,
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({});
@@ -1384,6 +1496,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: {
               type: 'text',
@@ -1394,6 +1507,7 @@ describe('validateField', () => {
             validate: 'validate',
           },
         },
+        'This is a long text input',
         false,
       ),
     ).toEqual({});
@@ -1407,6 +1521,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', name: 'test' },
             value: '',
@@ -1416,6 +1531,7 @@ describe('validateField', () => {
             validate: (value) => value === 'test',
           },
         },
+        '',
         true,
       ),
     ).toMatchSnapshot();
@@ -1424,6 +1540,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', name: 'test' },
             value: '123',
@@ -1433,6 +1550,7 @@ describe('validateField', () => {
             validate: (value) => value === 'test',
           },
         },
+        '123',
         true,
       ),
     ).toMatchSnapshot();
@@ -1448,6 +1566,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', name: 'test' },
             value: 'a',
@@ -1457,6 +1576,7 @@ describe('validateField', () => {
             validate: (value) => value === 'test',
           },
         },
+        'a',
         true,
       ),
     ).toMatchSnapshot();
@@ -1465,6 +1585,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', name: 'test' },
             value: 'a',
@@ -1474,6 +1595,7 @@ describe('validateField', () => {
             validate: (value) => value === 'test',
           },
         },
+        'a',
         true,
       ),
     ).toMatchSnapshot();
@@ -1487,6 +1609,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', name: 'test' },
             value: '',
@@ -1506,6 +1629,7 @@ describe('validateField', () => {
             },
           },
         },
+        '',
         true,
       ),
     ).toMatchSnapshot();
@@ -1514,6 +1638,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', name: 'test' },
             value: 'bil',
@@ -1533,6 +1658,7 @@ describe('validateField', () => {
             },
           },
         },
+        'bil',
         true,
       ),
     ).toMatchSnapshot();
@@ -1541,6 +1667,7 @@ describe('validateField', () => {
       await validateField(
         {
           _f: {
+            mount: true,
             name: 'test',
             ref: { type: 'text', name: 'test' },
             value: 'bil',
@@ -1560,8 +1687,116 @@ describe('validateField', () => {
             },
           },
         },
+        'bil',
         true,
       ),
     ).toMatchSnapshot();
+  });
+
+  describe('with Browser native validation', () => {
+    it('should invoke setCustomValidity for invalid input', () => {
+      const setCustomValidity = jest.fn();
+      const reportValidity = jest.fn();
+
+      validateField(
+        {
+          _f: {
+            name: 'test',
+            ref: {
+              setCustomValidity,
+              reportValidity,
+              name: 'test',
+              value: '',
+            },
+            value: '',
+            required: true,
+            mount: true,
+          },
+        },
+        '',
+        false,
+        true,
+      );
+
+      expect(setCustomValidity).toBeCalledWith(' ');
+      expect(reportValidity).toBeCalled();
+    });
+
+    it('should invoke setCustomValidity for invalid input with its message', () => {
+      const setCustomValidity = jest.fn();
+      const reportValidity = jest.fn();
+
+      validateField(
+        {
+          _f: {
+            name: 'test',
+            ref: {
+              setCustomValidity,
+              reportValidity,
+              name: 'test',
+              value: '',
+            },
+            value: '',
+            required: 'something is wrong',
+            mount: true,
+          },
+        },
+        '',
+        false,
+        true,
+      );
+
+      expect(setCustomValidity).toBeCalledWith('something is wrong');
+      expect(reportValidity).toBeCalled();
+    });
+
+    it('should invoke setCustomValidity with empty string for a valid input', () => {
+      const setCustomValidity = jest.fn();
+      const reportValidity = jest.fn();
+
+      validateField(
+        {
+          _f: {
+            name: 'test',
+            ref: {
+              setCustomValidity,
+              reportValidity,
+              name: 'test',
+              value: 'test',
+            },
+            value: 'test',
+            required: true,
+            mount: true,
+          },
+        },
+        'test',
+        false,
+        true,
+      );
+
+      expect(setCustomValidity).toBeCalledWith('');
+      expect(reportValidity).toBeCalled();
+    });
+
+    it('should abort validation early when input is disabled', async () => {
+      expect(
+        await validateField(
+          {
+            _f: {
+              name: 'test',
+              ref: {
+                name: 'test',
+                value: '',
+              },
+              value: '',
+              required: 'something is wrong',
+              disabled: true,
+            },
+          },
+          '',
+          false,
+        ),
+      ).toEqual({});
+    });
   });
 });

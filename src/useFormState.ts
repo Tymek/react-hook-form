@@ -2,24 +2,23 @@ import * as React from 'react';
 
 import getProxyFormState from './logic/getProxyFormState';
 import shouldRenderFormState from './logic/shouldRenderFormState';
-import isProxyEnabled from './utils/isProxyEnabled';
+import convertToArrayPayload from './utils/convertToArrayPayload';
 import {
   FieldValues,
-  FormState,
+  Path,
   UseFormStateProps,
   UseFormStateReturn,
 } from './types';
 import { useFormContext } from './useFormContext';
+import { useSubscribe } from './useSubscribe';
 
 function useFormState<TFieldValues extends FieldValues = FieldValues>(
   props?: UseFormStateProps<TFieldValues>,
 ): UseFormStateReturn<TFieldValues> {
-  const methods = useFormContext();
-  const { formStateRef, formStateSubjectRef, readFormStateRef } =
-    (props && props.control) || methods.control;
-
-  const [formState, updateFormState] = React.useState(formStateRef.current);
-  const readFormState = React.useRef({
+  const methods = useFormContext<TFieldValues>();
+  const { control = methods.control, disabled, name } = props || {};
+  const [formState, updateFormState] = React.useState(control._formState);
+  const _localProxyFormState = React.useRef({
     isDirty: false,
     dirtyFields: false,
     touchedFields: false,
@@ -27,26 +26,29 @@ function useFormState<TFieldValues extends FieldValues = FieldValues>(
     isValid: false,
     errors: false,
   });
+  const _name = React.useRef(name);
+  _name.current = name;
 
-  React.useEffect(() => {
-    const formStateSubscription = formStateSubjectRef.current.subscribe({
-      next: (formState) => {
-        shouldRenderFormState(formState, readFormState.current) &&
-          updateFormState({
-            ...formStateRef.current,
-            ...formState,
-          });
-      },
-    });
+  useSubscribe({
+    disabled,
+    callback: (formState) =>
+      (!_name.current ||
+        !formState.name ||
+        convertToArrayPayload(_name.current).includes(
+          formState.name as Path<TFieldValues>,
+        )) &&
+      shouldRenderFormState(formState, _localProxyFormState.current) &&
+      updateFormState({
+        ...control._formState,
+        ...formState,
+      }),
+    subject: control._subjects.state,
+  });
 
-    return () => formStateSubscription.unsubscribe();
-  }, []);
-
-  return getProxyFormState<TFieldValues>(
-    isProxyEnabled,
-    formState as FormState<TFieldValues>,
-    readFormStateRef,
-    readFormState,
+  return getProxyFormState(
+    formState,
+    control._proxyFormState,
+    _localProxyFormState.current,
     false,
   );
 }

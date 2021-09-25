@@ -1,12 +1,13 @@
 import { get } from '../utils';
 import deepEqual from '../utils/deepEqual';
 import { deepMerge } from '../utils/deepMerge';
+import isNullOrUndefined from '../utils/isNullOrUndefined';
 import set from '../utils/set';
 
 function setDirtyFields<
   T extends Record<string, unknown>[],
   U extends Record<string, unknown>[],
-  K extends Record<string, boolean | []>
+  K extends Record<string, boolean | []>,
 >(
   values: T,
   defaultValues: U,
@@ -29,6 +30,7 @@ function setDirtyFields<
           key,
         );
       } else {
+        !isNullOrUndefined(defaultValues) &&
         deepEqual(get(defaultValues[index] || {}, key), values[index][key])
           ? set(dirtyFields[index] || {}, key)
           : (dirtyFields[index] = {

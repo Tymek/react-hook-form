@@ -1,5 +1,257 @@
 # Changelog
 
+## [7.16.0] - 2021-09-25
+
+## Added
+
+- `register` allowed pass custom `onChange` and `onBlur`
+
+```tsx
+<input
+  type="text"
+  {...register('test', {
+    onChange: (e) => {},
+    onBlur: (e) => {},
+  })}
+/>
+```
+
+## [7.15.0] - 2021-09-05
+
+## Added
+
+- `useFieldArray` new method `replace()`
+
+```tsx
+const { control } = useForm({
+  defaultValues: {
+    test: [{ value: 'lorem' }, { value: 'ipsum' }],
+  },
+});
+const { fields, replace } = useFieldArray({
+  control,
+  name: 'test',
+});
+
+const handleFullyReplacement = (): void => {
+  // remove old and set fully new values
+  replace([{ value: 'dolor' }, { value: 'sit' }, { value: 'amet' }]);
+};
+```
+
+## [7.14.0] - 2021-08-27
+
+## Added
+
+- `register` add dependent validation
+
+```tsx
+const App = () => {
+  const { register, getValues } = useForm();
+
+  return (
+    <form>
+      <input
+        {...register('firstName', {
+          validate: (value) => {
+            return getValues('lastName') === value;
+          },
+        })}
+      />
+      <input {...register('lastName', { deps: ['firstName'] })} /> // dependant validation
+    </form>
+  );
+};
+```
+
+## [7.13.0] - 2021-08-22
+
+## Added
+
+`Trigger`
+
+- Trigger will enable object name trigger and field array name trigger
+
+```tsx
+useFieldArray({ name: 'test' });
+
+trigger('name'); // will trigger the whole field array to validate
+```
+
+`register`
+
+- added a `disabled` prop as an option to toggle input disable attribute
+- register will be able to seek input DOM reference through the `ref` callback
+
+```tsx
+register('test', { disabled: true }) // will set value to undefined and pass disabled down to the input attribute
+
+<div {...register('test')}>
+  <input name="test" /> // this input will be registered
+</div>
+```
+
+`useWatch`
+
+- added `disabled` prop to toggle the state subscription.
+
+```tsx
+useWatch({ disabled: true }); // you toggle the subscription
+```
+
+`useFormState`
+
+- added `disabled` prop to toggle the state subscription.
+
+```tsx
+useFormState({ disabled: true }); // you toggle the subscription
+```
+
+`setValue`
+
+- allow set value for non-registered inputs include nested object and array field.
+
+```tsx
+<input {...register('test.0.firstName')} />
+
+setValue('test', [{ firstName: 'bill' }, {firstName: 'kotaro}, {firstName: 'joris'}]) // this will works
+```
+
+## [7.12.0] - 2021-07-24
+
+## Added
+
+- new `useForm` config `delayError`
+
+```tsx
+useForm({
+  delayError: 500, // delay error appear with 500ms
+});
+```
+
+## [7.11.0] - 2021-07-13
+
+## Added
+
+- `update` method to update an field array inputs
+
+```tsx
+const { update } = useFieldArray();
+
+update(0, data); // update an individual field array node
+```
+
+## [7.10.0] - 2021-07-02
+
+## Changed
+
+- `defaultValue` is no longer a required prop for register input with `useFieldArray`
+
+## [7.9.0] - 2021-06-19
+
+## Added
+
+- new config at `useForm` to enabled native browser validation
+
+```tsx
+const { register, handleSubmit } = useForm({
+  shouldUseNativeValidation: true,
+});
+```
+
+## [7.8.5] - 2021-06-15
+
+### Change
+
+- `useController` no longer access input `ref` except `focus` event for focus management
+
+## [7.8.0] - 2021-06-5
+
+### Added
+
+- `setValue` support `shouldTouch` to update formState touchFields
+
+```tsx
+setValue('firstName', 'value', { shouldTouch: true });
+```
+
+- `register` now accept `value` as option
+
+```tsx
+register('firstName', { value: 'value' });
+```
+
+## Changed
+
+- `isValid` will initialise as `false`
+
+## [7.7.1] - 2021-05-30
+
+### Fixed
+
+- `shouldUnregister: false` should not shallow merge or register absent input fields from `defaultValues`
+
+## [7.7.0] - 2021-05-29
+
+### Added
+
+- `trigger` support focus with error input
+
+```ts
+trigger('inputName', { shouldFocus: true });
+```
+
+### Changed
+
+- `handleSubmit` will `throw` error within the onSubmit callback
+
+## [7.6.0] - 2021-05-15
+
+### Changed
+
+- `useForm` will `register` missing inputs from `defaultValues`
+
+```tsx
+const App = () => {
+  const { register, handleSubmit } = useForm({
+    defaultValues: {
+      test: { firstName: 'bill', lastName: 'luo' },
+    },
+  });
+
+  const onSubmit = (data) => {
+    // missing registered input will be included
+    console.log(data); // { test: { firstName: 'bill', lastName: 'luo' } }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('test.firstName')} />
+      <button />
+    </form>
+  );
+};
+```
+
+## [7.5.0] - 2021-05-09
+
+### Changed
+
+- `isSubmitSuccessful` will return false when `handleSubmit` callback failed with `Error` or `Promise` reject.
+- unmounted input will no longer get validated even with `shouldUnregister: false`
+
+## [7.4.0] - 2021-05-04
+
+### Added
+
+- new `name` prop for `useFormState` to subscribe to individual inputs.
+
+```ts
+useFormState({
+  name: 'inputName', // optional and can be array of inputs' name as well
+});
+```
+
 ## [7.2.2] - 2021-04-21
 
 ### Changes
@@ -18,7 +270,7 @@ useForm({
   shouldUnregister: true // default to false
 })
 
-// Component/Hook level config (can not overwrites global cocnfig)
+// Component/Hook level config (can not overwrites global config)
 register('test', {
   shouldUnregister: true // default to false
 })
@@ -396,7 +648,7 @@ function Input({ control, name }) {
 ```tsx
 useWatch({
   name: 'test',
-  defaultValue: 'data', // this value will only show on the inital render
+  defaultValue: 'data', // this value will only show on the initial render
 });
 ```
 
