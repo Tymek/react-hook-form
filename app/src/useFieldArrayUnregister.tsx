@@ -17,7 +17,6 @@ type FormInputs = {
 const ConditionField = <T extends any[]>({
   control,
   index,
-  fields,
   unregister,
 }: {
   control: Control<FormInputs>;
@@ -25,7 +24,7 @@ const ConditionField = <T extends any[]>({
   index: number;
   fields: T;
 }) => {
-  const output = useWatch<FormInputs>({
+  const output = useWatch({
     name: 'data',
     control,
   });
@@ -40,10 +39,7 @@ const ConditionField = <T extends any[]>({
   }, [unregister, index]);
 
   return output?.[index]?.name === 'bill' ? (
-    <input
-      {...control.register(`data.${index}.conditional`)}
-      defaultValue={fields[index].conditional}
-    />
+    <input {...control.register(`data.${index}.conditional`)} />
   ) : null;
 };
 
@@ -62,37 +58,30 @@ const UseFieldArrayUnregister: React.FC = () => {
     },
     mode: 'onSubmit',
   });
-  const {
-    fields,
-    append,
-    prepend,
-    swap,
-    move,
-    insert,
-    remove,
-  } = useFieldArray<FormInputs>({
-    control,
-    name: 'data',
-  });
-  const [data, setData] = React.useState([]);
-  const onSubmit = (data: any) => {
-    setData(data);
-  };
+  const { fields, append, prepend, swap, move, insert, remove } =
+    useFieldArray<FormInputs>({
+      control,
+      name: 'data',
+    });
+  const [data, setData] = React.useState<FormInputs>();
   const updateFieldArray = () => {
-    setValue('data', [...getValues().data, { name: 'test' }]);
+    setValue('data', [...getValues().data, { name: 'test', conditional: '' }]);
   };
 
   renderCount++;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form
+      onSubmit={handleSubmit((data) => {
+        setData(data);
+      })}
+    >
       <ul>
         {fields.map((data, index) => (
           <li key={data.id}>
             {index % 2 ? (
               <input
                 id={`field${index}`}
-                defaultValue={data.name}
                 data-order={index}
                 {...register(`data.${index}.name`, {
                   required: 'This is required',
@@ -108,7 +97,6 @@ const UseFieldArrayUnregister: React.FC = () => {
                   required: 'This is required',
                 }}
                 name={`data.${index}.name`}
-                defaultValue={data.name}
                 data-order={index}
               />
             )}
@@ -133,7 +121,9 @@ const UseFieldArrayUnregister: React.FC = () => {
       <button
         id="append"
         type="button"
-        onClick={() => append({ name: renderCount.toString() })}
+        onClick={() =>
+          append({ name: renderCount.toString(), conditional: '' })
+        }
       >
         append
       </button>
@@ -141,7 +131,9 @@ const UseFieldArrayUnregister: React.FC = () => {
       <button
         id="prepend"
         type="button"
-        onClick={() => prepend({ name: renderCount.toString() })}
+        onClick={() =>
+          prepend({ name: renderCount.toString(), conditional: '' })
+        }
       >
         prepend
       </button>
@@ -157,7 +149,9 @@ const UseFieldArrayUnregister: React.FC = () => {
       <button
         id="insert"
         type="button"
-        onClick={() => insert(1, { name: renderCount.toString() })}
+        onClick={() =>
+          insert(1, { name: renderCount.toString(), conditional: '' })
+        }
       >
         insert
       </button>

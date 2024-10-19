@@ -1,5 +1,26 @@
-import { FieldValues } from './fields';
 import { NestedValue } from './form';
+
+/*
+Projects that React Hook Form installed don't include the DOM library need these interfaces to compile.
+React Native applications is no DOM available. The JavaScript runtime is ES6/ES2015 only.
+These definitions allow such projects to compile with only --lib ES6.
+
+Warning: all of these interfaces are empty.
+If you want type definitions for various properties, you need to add `--lib DOM` (via command line or tsconfig.json).
+*/
+
+export type Noop = () => void;
+
+interface File extends Blob {
+  readonly lastModified: number;
+  readonly name: string;
+}
+
+interface FileList {
+  readonly length: number;
+  item(index: number): File | null;
+  [index: number]: File;
+}
 
 export type Primitive =
   | null
@@ -10,6 +31,8 @@ export type Primitive =
   | symbol
   | bigint;
 
+export type BrowserNativeObject = Date | FileList | File;
+
 export type EmptyObject = { [K in string | number]: never };
 
 export type NonUndefined<T> = T extends undefined ? never : T;
@@ -18,126 +41,94 @@ export type LiteralUnion<T extends U, U extends Primitive> =
   | T
   | (U & { _?: never });
 
-export type DeepPartial<T> = T extends Array<infer U>
-  ? Array<DeepPartial<U>>
-  : T extends ReadonlyArray<infer U>
-  ? ReadonlyArray<DeepPartial<U>>
-  : T extends { [key in keyof T]: T[key] }
-  ? {
-      [K in keyof T]?: DeepPartial<T[K]>;
-    }
-  : T;
-
-export type IsAny<T> = boolean extends (T extends never ? true : false)
-  ? true
-  : false;
-
-export type DeepMap<T, TValue> = {
-  [K in keyof T]?: IsAny<T[K]> extends true
-    ? any
-    : NonUndefined<T[K]> extends NestedValue | Date | FileList
-    ? TValue
-    : NonUndefined<T[K]> extends object
-    ? DeepMap<T[K], TValue>
-    : NonUndefined<T[K]> extends Array<infer U>
-    ? IsAny<U> extends true
-      ? Array<any>
-      : U extends NestedValue | Date | FileList
-      ? Array<TValue>
-      : U extends object
-      ? Array<DeepMap<U, TValue>>
-      : Array<TValue>
-    : TValue;
-};
-
-export type IsFlatObject<T extends object> = Extract<
-  Exclude<T[keyof T], NestedValue | Date | FileList>,
-  any[] | object
-> extends never
-  ? true
-  : false;
-
-type IsTuple<T extends ReadonlyArray<any>> = number extends T['length']
-  ? false
-  : true;
-type TupleKey<T extends ReadonlyArray<any>> = Exclude<keyof T, keyof any[]>;
-type ArrayKey = number;
-
-type PathImpl<K extends string | number, V> = V extends Primitive
-  ? `${K}`
-  : `${K}` | `${K}.${Path<V>}`;
-
-export type Path<T> = T extends ReadonlyArray<infer V>
-  ? IsTuple<T> extends true
-    ? {
-        [K in TupleKey<T>]-?: PathImpl<K & string, T[K]>;
-      }[TupleKey<T>]
-    : PathImpl<ArrayKey, V>
-  : {
-      [K in keyof T]-?: PathImpl<K & string, T[K]>;
-    }[keyof T];
-
-export type FieldPath<TFieldValues extends FieldValues> = Path<TFieldValues>;
-
-type ArrayPathImpl<K extends string | number, V> = V extends Primitive
-  ? never
-  : V extends ReadonlyArray<infer U>
-  ? U extends Primitive
-    ? never
-    : `${K}` | `${K}.${ArrayPath<V>}`
-  : `${K}.${ArrayPath<V>}`;
-
-export type ArrayPath<T> = T extends ReadonlyArray<infer V>
-  ? IsTuple<T> extends true
-    ? {
-        [K in TupleKey<T>]-?: ArrayPathImpl<K & string, T[K]>;
-      }[TupleKey<T>]
-    : ArrayPathImpl<ArrayKey, V>
-  : {
-      [K in keyof T]-?: ArrayPathImpl<K & string, T[K]>;
-    }[keyof T];
-
-export type FieldArrayPath<
-  TFieldValues extends FieldValues
-> = ArrayPath<TFieldValues>;
-
-export type PathValue<
-  T,
-  P extends Path<T> | ArrayPath<T>
-> = P extends `${infer K}.${infer R}`
-  ? K extends keyof T
-    ? R extends Path<T[K]>
-      ? PathValue<T[K], R>
-      : never
-    : K extends `${ArrayKey}`
-    ? T extends ReadonlyArray<infer V>
-      ? PathValue<V, R & Path<V>>
-      : never
-    : never
-  : P extends keyof T
-  ? T[P]
-  : P extends `${ArrayKey}`
-  ? T extends ReadonlyArray<infer V>
-    ? V
+export type ExtractObjects<T> = T extends infer U
+  ? U extends object
+    ? U
     : never
   : never;
 
-export type FieldPathValue<
-  TFieldValues extends FieldValues,
-  TFieldPath extends FieldPath<TFieldValues>
-> = PathValue<TFieldValues, TFieldPath>;
+export type DeepPartial<T> = T extends BrowserNativeObject | NestedValue
+  ? T
+  : {
+      [K in keyof T]?: ExtractObjects<T[K]> extends never
+        ? T[K]
+        : DeepPartial<T[K]>;
+    };
 
-export type FieldArrayPathValue<
-  TFieldValues extends FieldValues,
-  TFieldArrayPath extends FieldArrayPath<TFieldValues>
-> = PathValue<TFieldValues, TFieldArrayPath>;
+export type DeepPartialSkipArrayKey<T> = T extends
+  | BrowserNativeObject
+  | NestedValue
+  ? T
+  : T extends ReadonlyArray<any>
+    ? { [K in keyof T]: DeepPartialSkipArrayKey<T[K]> }
+    : { [K in keyof T]?: DeepPartialSkipArrayKey<T[K]> };
 
-export type FieldPathValues<
-  TFieldValues extends FieldValues,
-  TPath extends FieldPath<TFieldValues>[]
-> = {} & {
-  [K in keyof TPath]: FieldPathValue<
-    TFieldValues,
-    TPath[K] & FieldPath<TFieldValues>
-  >;
+/**
+ * Checks whether the type is any
+ * See {@link https://stackoverflow.com/a/49928360/3406963}
+ * @typeParam T - type which may be any
+ * ```
+ * IsAny<any> = true
+ * IsAny<string> = false
+ * ```
+ */
+export type IsAny<T> = 0 extends 1 & T ? true : false;
+
+/**
+ * Checks whether the type is never
+ * @typeParam T - type which may be never
+ * ```
+ * IsAny<never> = true
+ * IsAny<string> = false
+ * ```
+ */
+export type IsNever<T> = [T] extends [never] ? true : false;
+
+/**
+ * Checks whether T1 can be exactly (mutually) assigned to T2
+ * @typeParam T1 - type to check
+ * @typeParam T2 - type to check against
+ * ```
+ * IsEqual<string, string> = true
+ * IsEqual<'foo', 'foo'> = true
+ * IsEqual<string, number> = false
+ * IsEqual<string, number> = false
+ * IsEqual<string, 'foo'> = false
+ * IsEqual<'foo', string> = false
+ * IsEqual<'foo' | 'bar', 'foo'> = boolean // 'foo' is assignable, but 'bar' is not (true | false) -> boolean
+ * ```
+ */
+export type IsEqual<T1, T2> = T1 extends T2
+  ? (<G>() => G extends T1 ? 1 : 2) extends <G>() => G extends T2 ? 1 : 2
+    ? true
+    : false
+  : false;
+
+export type DeepMap<T, TValue> =
+  IsAny<T> extends true
+    ? any
+    : T extends BrowserNativeObject | NestedValue
+      ? TValue
+      : T extends object
+        ? { [K in keyof T]: DeepMap<NonUndefined<T[K]>, TValue> }
+        : TValue;
+
+export type IsFlatObject<T extends object> =
+  Extract<
+    Exclude<T[keyof T], NestedValue | Date | FileList>,
+    any[] | object
+  > extends never
+    ? true
+    : false;
+
+export type Merge<A, B> = {
+  [K in keyof A | keyof B]?: K extends keyof A & keyof B
+    ? [A[K], B[K]] extends [object, object]
+      ? Merge<A[K], B[K]>
+      : A[K] | B[K]
+    : K extends keyof A
+      ? A[K]
+      : K extends keyof B
+        ? B[K]
+        : never;
 };

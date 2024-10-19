@@ -1,15 +1,26 @@
-import * as React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { act, renderHook } from '@testing-library/react-hooks';
+import React from 'react';
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 
 import { VALIDATION_MODE } from '../../constants';
+import { Control, FieldPath } from '../../types';
+import { useController } from '../../useController';
 import { useFieldArray } from '../../useFieldArray';
 import { useForm } from '../../useForm';
-import { mockGenerateId } from '../useFieldArray.test';
+
+let i = 0;
+
+jest.mock('../../logic/generateId', () => () => String(i++));
 
 describe('append', () => {
   beforeEach(() => {
-    mockGenerateId();
+    i = 0;
   });
 
   it('should append dirtyFields fields correctly', async () => {
@@ -40,11 +51,7 @@ describe('append', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button type="button" onClick={() => append({ value: '' })}>
             append
@@ -61,7 +68,7 @@ describe('append', () => {
     });
     fireEvent.blur(screen.getAllByRole('textbox')[0]);
 
-    await waitFor(() => screen.getByText('dirty'));
+    expect(await screen.findByText('dirty')).toBeVisible();
 
     expect(dirtyInputs).toEqual({
       test: [{ value: true }],
@@ -70,12 +77,17 @@ describe('append', () => {
     fireEvent.click(screen.getByRole('button'));
 
     expect(dirtyInputs).toEqual({
-      test: [{ value: true }, undefined, undefined, { value: true }],
+      test: [
+        { value: true },
+        { value: false },
+        { value: false },
+        { value: true },
+      ],
     });
   });
 
   it('should append data into the fields', () => {
-    let currentFields: any = [];
+    let currentFields: unknown[] = [];
     const Component = () => {
       const { register, control } = useForm<{
         test: { test: string }[];
@@ -94,7 +106,6 @@ describe('append', () => {
               <input
                 key={field.id}
                 {...register(`test.${index}.test` as const)}
-                defaultValue={field.test}
               />
             );
           })}
@@ -115,37 +126,25 @@ describe('append', () => {
 
     render(<Component />);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'append' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
 
-    act(() => {
-      expect(currentFields).toEqual([{ id: '0', test: 'test' }]);
-    });
+    expect(currentFields).toEqual([{ id: '0', test: 'test' }]);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'append' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
 
-    act(() => {
-      expect(currentFields).toEqual([
-        { id: '0', test: 'test' },
-        { id: '1', test: 'test' },
-      ]);
-    });
+    expect(currentFields).toEqual([
+      { id: '0', test: 'test' },
+      { id: '2', test: 'test' },
+    ]);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'appendBatch' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'appendBatch' }));
 
-    act(() => {
-      expect(currentFields).toEqual([
-        { id: '0', test: 'test' },
-        { id: '1', test: 'test' },
-        { id: '2', test: 'test-batch' },
-        { id: '3', test: 'test-batch1' },
-      ]);
-    });
+    expect(currentFields).toEqual([
+      { id: '0', test: 'test' },
+      { id: '2', test: 'test' },
+      { id: '5', test: 'test-batch' },
+      { id: '6', test: 'test-batch1' },
+    ]);
   });
 
   it.each(['isDirty', 'dirtyFields'])(
@@ -177,7 +176,6 @@ describe('append', () => {
                 <input
                   key={field.id}
                   {...register(`test.${index}.test` as const)}
-                  defaultValue={field.test}
                 />
               );
             })}
@@ -190,17 +188,11 @@ describe('append', () => {
 
       render(<Component />);
 
-      act(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'append' }));
-      });
+      fireEvent.click(screen.getByRole('button', { name: 'append' }));
 
-      act(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'append' }));
-      });
+      fireEvent.click(screen.getByRole('button', { name: 'append' }));
 
-      act(() => {
-        fireEvent.click(screen.getByRole('button', { name: 'append' }));
-      });
+      fireEvent.click(screen.getByRole('button', { name: 'append' }));
 
       expect(isDirtyValue).toBeTruthy();
       expect(dirtyValue).toEqual({
@@ -210,7 +202,7 @@ describe('append', () => {
   );
 
   it('should trigger reRender when user is watching the all field array', () => {
-    const watched: any[] = [];
+    const watched: unknown[] = [];
     const Component = () => {
       const { register, watch, control } = useForm<{
         test: { value: string }[];
@@ -224,11 +216,7 @@ describe('append', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button type="button" onClick={() => append({ value: '' })}>
             append
@@ -261,11 +249,7 @@ describe('append', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button type="button" onClick={() => append({ value: '3' })}>
             append
@@ -282,7 +266,7 @@ describe('append', () => {
 
     expect(inputs).toHaveLength(3);
 
-    // expect(document.activeElement).toEqual(inputs[2]); no longer working
+    expect(document.activeElement).toEqual(inputs[2]);
   });
 
   it('should not focus if shouldFocus is false', () => {
@@ -297,11 +281,7 @@ describe('append', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button
             type="button"
@@ -339,10 +319,7 @@ describe('append', () => {
         <div>
           {fields.map((field, i) => (
             <div key={field.id}>
-              <input
-                defaultValue={field.value}
-                {...register(`test.${i}.value` as const)}
-              />
+              <input {...register(`test.${i}.value` as const)} />
             </div>
           ))}
           <button onClick={() => append({ value: 'test' })}>append</button>
@@ -362,6 +339,89 @@ describe('append', () => {
         [{ value: 'test' }],
       ]),
     );
+  });
+
+  it('should append nested field value without its reference', () => {
+    type FormValues = {
+      test: { name: { deep: string } }[];
+    };
+
+    function Input({
+      name,
+      control,
+    }: {
+      name: FieldPath<FormValues>;
+      control: Control<FormValues>;
+    }) {
+      const { field } = useController({
+        name: name as 'test.0.name.deep',
+        control,
+      });
+
+      return <input type="text" {...field} />;
+    }
+
+    function FieldArray({
+      control,
+      name,
+      itemDefaultValue,
+    }: {
+      control: Control<FormValues>;
+      name: FieldPath<FormValues>;
+      itemDefaultValue: { name: { deep: string } };
+    }) {
+      const { fields, append } = useFieldArray({
+        control,
+        name: name as 'test',
+      });
+
+      return (
+        <>
+          {fields.map((item, index) => (
+            <Input
+              key={item.id}
+              name={`test.${index}.name.deep`}
+              control={control}
+            />
+          ))}
+          <button type="button" onClick={() => append(itemDefaultValue)}>
+            Append
+          </button>
+        </>
+      );
+    }
+
+    function App() {
+      const { control } = useForm<FormValues>({
+        defaultValues: {
+          test: [],
+        },
+      });
+
+      return (
+        <form>
+          <FieldArray
+            name="test"
+            control={control}
+            itemDefaultValue={{ name: { deep: '' } }}
+          />
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: '1234' },
+    });
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(
+      (screen.getAllByRole('textbox')[1] as HTMLInputElement).value,
+    ).toEqual('');
   });
 
   describe('with resolver', () => {
@@ -388,7 +448,11 @@ describe('append', () => {
           test: [{ value: '1' }],
         },
         undefined,
-        { criteriaMode: undefined, fields: {} },
+        {
+          criteriaMode: undefined,
+          fields: {},
+          names: [],
+        },
       );
     });
 
@@ -408,7 +472,113 @@ describe('append', () => {
         result.current.append({ value: '1' });
       });
 
-      expect(resolver).not.toBeCalled();
+      expect(resolver).toBeCalled();
     });
+  });
+
+  it('should not omit keyName when provided', async () => {
+    type FormValues = {
+      test: {
+        test: string;
+        id: string;
+      }[];
+    };
+
+    const App = () => {
+      const [data, setData] = React.useState<FormValues>();
+      const { control, register, handleSubmit } = useForm<FormValues>({
+        defaultValues: {
+          test: [{ id: '1234', test: 'data' }],
+        },
+      });
+
+      const { fields, append } = useFieldArray({
+        control,
+        name: 'test',
+      });
+
+      return (
+        <form onSubmit={handleSubmit(setData)}>
+          {fields.map((field, index) => {
+            return <input key={field.id} {...register(`test.${index}.test`)} />;
+          })}
+          <button
+            type={'button'}
+            onClick={() => {
+              append({
+                id: 'whatever',
+                test: '1234',
+              });
+            }}
+          >
+            append
+          </button>
+          <button>submit</button>
+          <p>{JSON.stringify(data)}</p>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+
+    expect(
+      await screen.findByText(
+        '{"test":[{"id":"1234","test":"data"},{"id":"whatever","test":"1234"}]}',
+      ),
+    ).toBeVisible();
+  });
+
+  it('should not omit keyName when provided and defaultValue is empty', async () => {
+    type FormValues = {
+      test: {
+        test: string;
+        id: string;
+      }[];
+    };
+
+    const App = () => {
+      const [data, setData] = React.useState<FormValues>();
+      const { control, register, handleSubmit } = useForm<FormValues>();
+
+      const { fields, append } = useFieldArray({
+        control,
+        name: 'test',
+      });
+
+      return (
+        <form onSubmit={handleSubmit(setData)}>
+          {fields.map((field, index) => {
+            return <input key={field.id} {...register(`test.${index}.test`)} />;
+          })}
+          <button
+            type={'button'}
+            onClick={() => {
+              append({
+                id: 'whatever',
+                test: '1234',
+              });
+            }}
+          >
+            append
+          </button>
+          <button>submit</button>
+          <p>{JSON.stringify(data)}</p>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+
+    expect(
+      await screen.findByText('{"test":[{"id":"whatever","test":"1234"}]}'),
+    ).toBeVisible();
   });
 });

@@ -2,13 +2,18 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 
 export default function App() {
-  const { register, errors, trigger, handleSubmit } = useForm();
+  const {
+    register,
+    formState: { errors },
+    trigger,
+    handleSubmit,
+  } = useForm();
 
   console.log('errors', errors);
 
   return (
     <form onSubmit={handleSubmit((data) => console.log(data))}>
-      <h1>validationFeild</h1>
+      <h1>validationField</h1>
       <label>First name: </label>
       <input {...register('firstName', { required: true })} />
 

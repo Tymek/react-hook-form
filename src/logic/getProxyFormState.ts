@@ -1,30 +1,30 @@
-import * as React from 'react';
-
 import { VALIDATION_MODE } from '../constants';
-import { FormState, FormStateProxy, ReadFormState } from '../types';
+import { Control, FieldValues, FormState, ReadFormState } from '../types';
 
-export default <TFieldValues>(
-  isProxyEnabled: boolean,
+export default <TFieldValues extends FieldValues, TContext = any>(
   formState: FormState<TFieldValues>,
-  readFormStateRef: React.MutableRefObject<ReadFormState>,
-  localReadFormStateRef?: React.MutableRefObject<ReadFormState>,
+  control: Control<TFieldValues, TContext>,
+  localProxyFormState?: ReadFormState,
   isRoot = true,
-) =>
-  isProxyEnabled
-    ? new Proxy(formState, {
-        get: (obj, prop: keyof FormStateProxy) => {
-          if (prop in obj) {
-            if (readFormStateRef.current[prop] !== VALIDATION_MODE.all) {
-              readFormStateRef.current[prop] = isRoot
-                ? VALIDATION_MODE.all
-                : true;
-            }
-            localReadFormStateRef &&
-              (localReadFormStateRef.current[prop] = true);
-            return obj[prop];
-          }
+) => {
+  const result = {
+    defaultValues: control._defaultValues,
+  } as typeof formState;
 
-          return undefined;
-        },
-      })
-    : formState;
+  for (const key in formState) {
+    Object.defineProperty(result, key, {
+      get: () => {
+        const _key = key as keyof FormState<TFieldValues> & keyof ReadFormState;
+
+        if (control._proxyFormState[_key] !== VALIDATION_MODE.all) {
+          control._proxyFormState[_key] = !isRoot || VALIDATION_MODE.all;
+        }
+
+        localProxyFormState && (localProxyFormState[_key] = true);
+        return formState[_key];
+      },
+    });
+  }
+
+  return result;
+};

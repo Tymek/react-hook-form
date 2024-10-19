@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { useForm, NestedValue } from 'react-hook-form';
+import { useForm, NestedValue, ValidationMode } from 'react-hook-form';
+import { useParams } from 'react-router-dom';
 
 let renderCounter = 0;
 
-const Basic: React.FC = (props: any) => {
+const Basic: React.FC = () => {
+  const { mode } = useParams();
+  const [data, setData] = React.useState({});
   const {
     register,
     handleSubmit,
@@ -30,18 +33,21 @@ const Basic: React.FC = (props: any) => {
     };
     arrayItem: { test1: string; test2: string }[];
   }>({
-    mode: props.match.params.mode,
+    mode: mode as keyof ValidationMode,
   });
   const [onInvalidCalledTimes, setOnInvalidCalledTimes] = useState(0);
-  const onValid = () => {};
   const onInvalid = () => setOnInvalidCalledTimes((prevCount) => prevCount + 1);
 
   renderCounter++;
 
   return (
-    <form onSubmit={handleSubmit(onValid, onInvalid)}>
+    <form
+      onSubmit={handleSubmit((data) => {
+        setData(data);
+      }, onInvalid)}
+    >
       <input
-        placeholder="nest.nest1"
+        placeholder="nestItem.nest1"
         {...register('nestItem.nest1', { required: true })}
       />
       {errors.nestItem?.nest1 && <p>nest 1 error</p>}
@@ -96,8 +102,8 @@ const Basic: React.FC = (props: any) => {
       {errors.minRequiredLength && <p>minRequiredLength error</p>}
       <select {...register('selectNumber', { required: true })}>
         <option value="">Select</option>
-        <option value={1}>1</option>
-        <option value={2}>1</option>
+        <option value={'1'}>1</option>
+        <option value={'2'}>2</option>
       </select>
       {errors.selectNumber && <p>selectNumber error</p>}
       <input
@@ -155,6 +161,7 @@ const Basic: React.FC = (props: any) => {
       <div id="on-invalid-called-times">
         onInvalid callback called {onInvalidCalledTimes} times
       </div>
+      <pre>{JSON.stringify(data)}</pre>
     </form>
   );
 };

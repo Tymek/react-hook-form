@@ -3,11 +3,15 @@ import ReactDOM from 'react-dom';
 import { useForm } from 'react-hook-form';
 
 export default function App() {
-  const { register, handleSubmit, errors } = useForm();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
   const onSubmit = (data) => {
     alert(JSON.stringify(data));
   };
-  const intialValues = {
+  const initialValues = {
     firstName: 'bill',
     lastName: 'luo',
     email: 'bluebill1049@hotmail.com',
@@ -20,7 +24,7 @@ export default function App() {
         <div>
           <label htmlFor="firstName">First Name</label>
           <input
-            defaultValue={intialValues.firstName}
+            defaultValue={initialValues.firstName}
             placeholder="bill"
             {...register('firstName', {
               validate: (value) => value !== 'bill',
@@ -32,7 +36,7 @@ export default function App() {
         <div>
           <label htmlFor="lastName">Last Name</label>
           <input
-            defaultValue={intialValues.lastName}
+            defaultValue={initialValues.lastName}
             placeholder="luo"
             {...register('lastName', {
               validate: (value) => value.length > 3,
@@ -44,7 +48,7 @@ export default function App() {
         <div>
           <label htmlFor="email">Email</label>
           <input
-            defaultValue={intialValues.email}
+            defaultValue={initialValues.email}
             placeholder="bluebill1049@hotmail.com"
             type="email"
             {...register('email')}
@@ -54,7 +58,7 @@ export default function App() {
         <div>
           <label htmlFor="age">Age</label>
           <input
-            defaultValue={intialValues.age}
+            defaultValue={initialValues.age}
             placeholder="0"
             type="text"
             {...register('age', {
@@ -69,7 +73,7 @@ export default function App() {
           <p>Your age is invalid</p>
         )}
         {errors.age && errors.age.type === 'lessThanHundred' && (
-          <p>Your age should be greater than 200</p>
+          <p>Your age should be less than 200</p>
         )}
 
         <button type="submit">Submit</button>

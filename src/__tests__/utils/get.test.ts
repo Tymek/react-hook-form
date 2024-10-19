@@ -33,5 +33,7 @@ describe('get', () => {
       bill: 'test',
     };
     expect(get(test, '')).toEqual(undefined);
+    expect(get(test, undefined)).toEqual(undefined);
+    expect(get(test, null)).toEqual(undefined);
   });
 });

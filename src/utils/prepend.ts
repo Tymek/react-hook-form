@@ -1,3 +1,6 @@
-export default function prepend<T>(data: T[], value: T | T[]): T[] {
-  return [...(Array.isArray(value) ? value : [value]), ...data];
-}
+import convertToArrayPayload from './convertToArrayPayload';
+
+export default <T>(data: T[], value: T | T[]): T[] => [
+  ...convertToArrayPayload(value),
+  ...convertToArrayPayload(data),
+];

@@ -1,24 +1,30 @@
-import * as React from 'react';
+import React from 'react';
 import {
-  act as actComponent,
+  act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from '@testing-library/react';
-import { act, renderHook } from '@testing-library/react-hooks';
 
 import { VALIDATION_MODE } from '../../constants';
+import { Control, FieldPath } from '../../types';
+import { useController } from '../../useController';
 import { useFieldArray } from '../../useFieldArray';
 import { useForm } from '../../useForm';
-import { mockGenerateId } from '../useFieldArray.test';
+import noop from '../../utils/noop';
+
+let i = 0;
+
+jest.mock('../../logic/generateId', () => () => String(i++));
 
 describe('prepend', () => {
   beforeEach(() => {
-    mockGenerateId();
+    i = 0;
   });
 
-  it('should pre-append data into the fields', () => {
+  it('should pre-append data into the fields', async () => {
     let currentFields: any = [];
 
     const Component = () => {
@@ -38,10 +44,7 @@ describe('prepend', () => {
         <form>
           {fields.map((field, index) => (
             <div key={field.id}>
-              <input
-                {...register(`test.${index}.test` as const)}
-                defaultValue={field.test}
-              />
+              <input {...register(`test.${index}.test` as const)} />
             </div>
           ))}
           <button type={'button'} onClick={() => prepend({ test: 'test' })}>
@@ -61,37 +64,25 @@ describe('prepend', () => {
 
     render(<Component />);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'prepend' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'prepend' }));
 
-    act(() => {
-      expect(currentFields).toEqual([{ id: '0', test: 'test' }]);
-    });
+    expect(currentFields).toEqual([{ id: '0', test: 'test' }]);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'prepend' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'prepend' }));
 
-    act(() => {
-      expect(currentFields).toEqual([
-        { id: '1', test: 'test' },
-        { id: '0', test: 'test' },
-      ]);
-    });
+    expect(currentFields).toEqual([
+      { id: '2', test: 'test' },
+      { id: '0', test: 'test' },
+    ]);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'prependBatch' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'prependBatch' }));
 
-    act(() => {
-      expect(currentFields).toEqual([
-        { id: '2', test: 'test-batch' },
-        { id: '3', test: 'test-batch1' },
-        { id: '1', test: 'test' },
-        { id: '0', test: 'test' },
-      ]);
-    });
+    expect(currentFields).toEqual([
+      { id: '5', test: 'test-batch' },
+      { id: '6', test: 'test-batch1' },
+      { id: '2', test: 'test' },
+      { id: '0', test: 'test' },
+    ]);
   });
 
   it.each(['isDirty', 'dirtyFields'])(
@@ -185,12 +176,11 @@ describe('prepend', () => {
       errors = tempErrors;
 
       return (
-        <form onSubmit={handleSubmit(() => {})}>
+        <form onSubmit={handleSubmit(noop)}>
           {fields.map((field, i) => (
             <input
               key={field.id}
               {...register(`test.${i}.value` as const, { required: true })}
-              defaultValue={field.value}
             />
           ))}
           <button type="button" onClick={() => prepend({ value: '' })}>
@@ -207,13 +197,17 @@ describe('prepend', () => {
 
     expect(errors.test).toBeUndefined();
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+    await waitFor(() => {
+      expect(errors.test).toHaveLength(1);
     });
 
     fireEvent.click(screen.getByRole('button', { name: /prepend/i }));
 
-    expect(errors.test).toHaveLength(2);
+    await waitFor(() => {
+      expect(errors.test).toHaveLength(2);
+    });
   });
 
   it('should trigger reRender when user is watching the all field array', () => {
@@ -231,11 +225,7 @@ describe('prepend', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button type="button" onClick={() => prepend({ value: '' })}>
             prepend
@@ -277,10 +267,7 @@ describe('prepend', () => {
         <div>
           {fields.map((field, i) => (
             <div key={`${field.id}`}>
-              <input
-                defaultValue={field.value}
-                {...register(`test.${i}.value` as const)}
-              />
+              <input {...register(`test.${i}.value` as const)} />
             </div>
           ))}
           <button onClick={() => append({ value: '' })}>append</button>
@@ -334,11 +321,7 @@ describe('prepend', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button type="button" onClick={() => prepend({ value: '' })}>
             prepend
@@ -369,11 +352,7 @@ describe('prepend', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button
             type="button"
@@ -392,6 +371,89 @@ describe('prepend', () => {
 
     expect(inputs).toHaveLength(3);
     expect(document.activeElement).toEqual(document.body);
+  });
+
+  it('should append nested field value without its reference', () => {
+    type FormValues = {
+      test: { name: { deep: string } }[];
+    };
+
+    function Input({
+      name,
+      control,
+    }: {
+      name: FieldPath<FormValues>;
+      control: Control<FormValues>;
+    }) {
+      const { field } = useController({
+        name: name as 'test.0.name.deep',
+        control,
+      });
+
+      return <input type="text" {...field} />;
+    }
+
+    function FieldArray({
+      control,
+      name,
+      itemDefaultValue,
+    }: {
+      control: Control<FormValues>;
+      name: FieldPath<FormValues>;
+      itemDefaultValue: { name: { deep: string } };
+    }) {
+      const { fields, prepend } = useFieldArray({
+        control,
+        name: name as 'test',
+      });
+
+      return (
+        <>
+          {fields.map((item, index) => (
+            <Input
+              key={item.id}
+              name={`test.${index}.name.deep`}
+              control={control}
+            />
+          ))}
+          <button type="button" onClick={() => prepend(itemDefaultValue)}>
+            Append
+          </button>
+        </>
+      );
+    }
+
+    function App() {
+      const { control } = useForm<FormValues>({
+        defaultValues: {
+          test: [],
+        },
+      });
+
+      return (
+        <form>
+          <FieldArray
+            name="test"
+            control={control}
+            itemDefaultValue={{ name: { deep: '' } }}
+          />
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: '1234' },
+    });
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(
+      (screen.getAllByRole('textbox')[0] as HTMLInputElement).value,
+    ).toEqual('');
   });
 
   describe('with resolver', () => {
@@ -418,7 +480,11 @@ describe('prepend', () => {
           test: [{ value: '1' }],
         },
         undefined,
-        { criteriaMode: undefined, fields: {} },
+        {
+          criteriaMode: undefined,
+          fields: {},
+          names: [],
+        },
       );
     });
 
@@ -438,7 +504,113 @@ describe('prepend', () => {
         result.current.prepend({ value: '1' });
       });
 
-      expect(resolver).not.toBeCalled();
+      expect(resolver).toBeCalled();
     });
+  });
+
+  it('should not omit keyName when provided', async () => {
+    type FormValues = {
+      test: {
+        test: string;
+        id: string;
+      }[];
+    };
+
+    const App = () => {
+      const [data, setData] = React.useState<FormValues>();
+      const { control, register, handleSubmit } = useForm<FormValues>({
+        defaultValues: {
+          test: [{ id: '1234', test: 'data' }],
+        },
+      });
+
+      const { fields, prepend } = useFieldArray({
+        control,
+        name: 'test',
+      });
+
+      return (
+        <form onSubmit={handleSubmit(setData)}>
+          {fields.map((field, index) => {
+            return <input key={field.id} {...register(`test.${index}.test`)} />;
+          })}
+          <button
+            type={'button'}
+            onClick={() => {
+              prepend({
+                id: 'whatever',
+                test: '1234',
+              });
+            }}
+          >
+            prepend
+          </button>
+          <button>submit</button>
+          <p>{JSON.stringify(data)}</p>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'prepend' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+
+    expect(
+      await screen.findByText(
+        '{"test":[{"id":"whatever","test":"1234"},{"id":"1234","test":"data"}]}',
+      ),
+    ).toBeVisible();
+  });
+
+  it('should not omit keyName when provided and defaultValue is empty', async () => {
+    type FormValues = {
+      test: {
+        test: string;
+        id: string;
+      }[];
+    };
+
+    const App = () => {
+      const [data, setData] = React.useState<FormValues>();
+      const { control, register, handleSubmit } = useForm<FormValues>();
+
+      const { fields, prepend } = useFieldArray({
+        control,
+        name: 'test',
+      });
+
+      return (
+        <form onSubmit={handleSubmit(setData)}>
+          {fields.map((field, index) => {
+            return <input key={field.id} {...register(`test.${index}.test`)} />;
+          })}
+          <button
+            type={'button'}
+            onClick={() => {
+              prepend({
+                id: 'whatever',
+                test: '1234',
+              });
+            }}
+          >
+            prepend
+          </button>
+          <button>submit</button>
+          <p>{JSON.stringify(data)}</p>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'prepend' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+
+    expect(
+      await screen.findByText('{"test":[{"id":"whatever","test":"1234"}]}'),
+    ).toBeVisible();
   });
 });

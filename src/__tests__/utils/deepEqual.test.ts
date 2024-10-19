@@ -17,6 +17,21 @@ describe('deepEqual', () => {
 
     expect(deepEqual([], [{}])).toBeFalsy();
     expect(deepEqual(new Date(), new Date('1999'))).toBeFalsy();
+
+    expect(
+      deepEqual(
+        {
+          unknown: undefined,
+          userName: '',
+          fruit: '',
+        },
+        {
+          userName: '',
+          fruit: '',
+          break: {},
+        },
+      ),
+    ).toBeFalsy();
   });
 
   it('should return false when either type is primitive', () => {
@@ -72,6 +87,12 @@ describe('deepEqual', () => {
           },
         ],
       ),
+    ).toBeTruthy();
+  });
+
+  it('should compare date time object valueOf', () => {
+    expect(
+      deepEqual({ test: new Date('1990') }, { test: new Date('1990') }),
     ).toBeTruthy();
   });
 });

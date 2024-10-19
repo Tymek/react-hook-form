@@ -1,19 +1,24 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, ValidationMode } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { useParams } from 'react-router-dom';
 
 let renderCounter = 0;
 
-const validationSchema = yup.object().shape({
-  firstName: yup.string().required(),
-  lastName: yup.string().max(5).required(),
-  select: yup.string().required(),
-  radio: yup.string().required(),
-  checkbox: yup.string().required(),
-});
+const validationSchema = yup
+  .object()
+  .shape({
+    firstName: yup.string().required(),
+    lastName: yup.string().max(5).required(),
+    select: yup.string().required(),
+    radio: yup.string().required(),
+    checkbox: yup.string().required(),
+  })
+  .required();
 
-const FormStateWithSchema: React.FC = (props: any) => {
+const FormStateWithSchema: React.FC = () => {
+  const { mode } = useParams();
   const {
     register,
     handleSubmit,
@@ -36,7 +41,7 @@ const FormStateWithSchema: React.FC = (props: any) => {
     checkbox: boolean;
   }>({
     resolver: yupResolver(validationSchema),
-    mode: props.match.params.mode,
+    mode: mode as keyof ValidationMode,
     defaultValues: {
       firstName: '',
       lastName: '',

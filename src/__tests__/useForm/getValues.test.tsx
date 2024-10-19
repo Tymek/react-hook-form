@@ -1,8 +1,16 @@
-import * as React from 'react';
-import { render } from '@testing-library/react';
-import { renderHook } from '@testing-library/react-hooks';
+import React from 'react';
+import {
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 
+import { Controller } from '../../controller';
 import { useForm } from '../../useForm';
+import { FormProvider, useFormContext } from '../../useFormContext';
+import { useFormState } from '../../useFormState';
 
 describe('getValues', () => {
   it('should return defaultValues before inputs mounted', () => {
@@ -189,5 +197,149 @@ describe('getValues', () => {
     render(<Component />);
 
     expect(data).toEqual({ test: 'test' });
+  });
+
+  it('should return defaultValues deep merge with form values', async () => {
+    let data: unknown;
+
+    const Component = () => {
+      const { getValues, register } = useForm({
+        defaultValues: {
+          test: {
+            firstName: 'test',
+            lastName: 'test',
+            time: new Date('1999-09-09'),
+            file: new File([''], 'filename'),
+          },
+        },
+      });
+
+      if (!data) {
+        data = getValues();
+      }
+
+      return (
+        <div>
+          <input {...register('test.firstName')} />
+          <button
+            onClick={() => {
+              data = getValues();
+            }}
+          >
+            getValues
+          </button>
+        </div>
+      );
+    };
+
+    render(<Component />);
+
+    expect(data).toEqual({
+      test: {
+        firstName: 'test',
+        lastName: 'test',
+        time: new Date('1999-09-09'),
+        file: new File([''], 'filename'),
+      },
+    });
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: {
+        value: '1234',
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(data).toMatchObject({
+      test: {
+        firstName: '1234',
+        lastName: 'test',
+      },
+    });
+  });
+
+  it('should return mounted input value after async reset', async () => {
+    let updatedValue: unknown;
+
+    type FormValues = {
+      firstName: string;
+    };
+
+    function Form() {
+      const { handleSubmit, reset, getValues } = useFormContext();
+      const { isDirty, isValid } = useFormState();
+
+      return (
+        <form
+          onSubmit={handleSubmit(async (data) => {
+            await Promise.resolve();
+            reset(data);
+          })}
+        >
+          <button
+            type={'button'}
+            onClick={() => {
+              updatedValue = getValues();
+            }}
+          >
+            getValues
+          </button>
+          <button type="submit" disabled={!isDirty || !isValid}>
+            submit
+          </button>
+
+          <Controller
+            name="firstName"
+            rules={{ required: true }}
+            render={({ field }) => <input {...field} />}
+          />
+        </form>
+      );
+    }
+
+    function App() {
+      const methods = useForm<FormValues>({
+        defaultValues: {
+          firstName: 'test',
+        },
+      });
+
+      return (
+        <FormProvider {...methods}>
+          <Form />
+        </FormProvider>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'test1' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+
+    expect(screen.getByRole('button', { name: 'submit' })).toBeDisabled();
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'test2' },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'submit' })).not.toBeDisabled(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'getValues' }));
+
+    expect(updatedValue).toEqual({
+      firstName: 'test2',
+    });
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'test3' },
+    });
+
+    expect(screen.getByRole('button', { name: 'submit' })).not.toBeDisabled();
   });
 });

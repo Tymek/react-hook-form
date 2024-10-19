@@ -40,7 +40,8 @@ describe('move', () => {
   });
 
   it('should return empty array when data passed was not an array', () => {
-    expect(move({} as unknown[], 0, 3)).toEqual([]);
+    // @ts-expect-error we want to test function on non-array input
+    expect(move({}, 0, 3)).toEqual([]);
   });
 
   it('should move nested item with empty slot', () => {

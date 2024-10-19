@@ -1,8 +1,9 @@
-import * as React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { useFieldArray } from '../../useFieldArray';
 import { useForm } from '../../useForm';
+import noop from '../../utils/noop';
 
 describe('useFieldArray focus', () => {
   it('should not focus any element when shouldFocus is set to false', () => {
@@ -22,11 +23,7 @@ describe('useFieldArray focus', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button
             type="button"
@@ -52,19 +49,57 @@ describe('useFieldArray focus', () => {
 
     render(<Component />);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /prepend/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /prepend/i }));
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /insert/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /insert/i }));
 
     expect(document.activeElement).toEqual(document.body);
+  });
+
+  it('should focus on the precise input index', () => {
+    function App() {
+      const { register, handleSubmit, control } = useForm({
+        defaultValues: {
+          test: [
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+            { value: '0' },
+          ],
+        },
+      });
+      const { fields, insert } = useFieldArray({ control, name: 'test' });
+
+      return (
+        <form onSubmit={handleSubmit(noop)}>
+          {fields.map((field, index) => (
+            <div key={field.id}>
+              <input
+                {...register(`test.${index}.value`)}
+                defaultValue={field.value}
+              />
+              <button onClick={() => insert(1, { value: '' })}>insert</button>
+            </div>
+          ))}
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /insert/i })[0]);
+
+    expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[1]);
   });
 
   it('should focus correct field array by focus index', () => {
@@ -84,11 +119,7 @@ describe('useFieldArray focus', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button
             type="button"
@@ -114,30 +145,20 @@ describe('useFieldArray focus', () => {
 
     render(<Component />);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
 
-    act(() => {
-      expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[0]);
-    });
+    expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[0]);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /prepend/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /prepend/i }));
 
-    act(() => {
-      expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[1]);
-    });
+    expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[1]);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /insert/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /insert/i }));
 
     expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[0]);
   });
 
-  it('should focus correct field array by focus index', () => {
+  it('should focus correct field array by focus name', () => {
     const Component = () => {
       const { register, control } = useForm<{
         test: { value: string }[];
@@ -154,11 +175,7 @@ describe('useFieldArray focus', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              {...register(`test.${i}.value` as const)}
-              defaultValue={field.value}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button
             type="button"
@@ -188,25 +205,15 @@ describe('useFieldArray focus', () => {
 
     render(<Component />);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
 
-    act(() => {
-      expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[0]);
-    });
+    expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[0]);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /prepend/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /prepend/i }));
 
-    act(() => {
-      expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[1]);
-    });
+    expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[1]);
 
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /insert/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /insert/i }));
 
     expect(document.activeElement).toEqual(screen.getAllByRole('textbox')[0]);
   });

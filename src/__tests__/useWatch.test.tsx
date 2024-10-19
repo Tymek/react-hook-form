@@ -1,150 +1,490 @@
-import 'jest-performance-testing';
-
-import * as React from 'react';
-import { perf, wait } from 'react-performance-testing';
+import React from 'react';
 import {
-  act as actComponent,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
-import { renderHook } from '@testing-library/react-hooks';
 
-import * as generateId from '../logic/generateId';
-import { Control, UseFieldArrayReturn, UseFormReturn } from '../types';
+import {
+  Control,
+  UseFieldArrayReturn,
+  UseFormRegister,
+  UseFormReturn,
+} from '../types';
+import { useController } from '../useController';
 import { useFieldArray } from '../useFieldArray';
 import { useForm } from '../useForm';
 import { FormProvider, useFormContext } from '../useFormContext';
 import { useWatch } from '../useWatch';
+import noop from '../utils/noop';
 
-const mockGenerateId = () => {
-  let id = 0;
-  jest.spyOn(generateId, 'default').mockImplementation(() => (id++).toString());
-};
+let i = 0;
+
+jest.mock('../logic/generateId', () => () => String(i++));
 
 describe('useWatch', () => {
   beforeEach(() => {
-    mockGenerateId();
+    i = 0;
   });
 
-  afterEach(() => {
-    (generateId.default as jest.Mock<any>).mockRestore();
+  it('should return default value in useForm', () => {
+    let method;
+    let watched;
+    const Component = () => {
+      method = useForm<{ test: string }>({ defaultValues: { test: 'test' } });
+      watched = useWatch({ control: method.control });
+      return <div />;
+    };
+    render(<Component />);
+
+    expect(watched).toEqual({ test: 'test' });
   });
 
-  describe('initialize', () => {
-    it('should return default value in useForm', () => {
-      let method: any;
-      let watched: any;
-      const Component = () => {
-        method = useForm<{ test: string }>({ defaultValues: { test: 'test' } });
-        watched = useWatch({ control: method.control });
-        return <div />;
-      };
-      render(<Component />);
-
-      expect(watched).toEqual({ test: 'test' });
-    });
-
-    it('should return default value in useWatch', () => {
-      const { result } = renderHook(() => {
-        const { control } = useForm<{ test: string }>({
-          defaultValues: {
-            test: 'test',
-          },
-        });
-        return useWatch({
-          control,
-          name: 'test',
-        });
+  it('should return default value in useWatch', () => {
+    const { result } = renderHook(() => {
+      const { control } = useForm<{ test: string }>({
+        defaultValues: {
+          test: 'test',
+        },
       });
-
-      expect(result.current).toEqual('test');
-    });
-
-    it('should return default value for single input', () => {
-      const { result } = renderHook(() => {
-        const { control } = useForm<{ test: string; test1: string }>({
-          defaultValues: {
-            test: 'test',
-            test1: 'test1',
-          },
-        });
-        return useWatch({
-          control,
-          name: 'test',
-        });
+      return useWatch({
+        control,
+        name: 'test',
       });
-
-      expect(result.current).toEqual('test');
     });
 
-    it('should return default values for array of inputs', () => {
-      const { result } = renderHook(() => {
-        const { control } = useForm<{ test: string; test1: string }>({
-          defaultValues: {
-            test: 'test',
-            test1: 'test1',
-          },
-        });
-        return useWatch({
-          control,
-          name: ['test', 'test1'],
-        });
+    expect(result.current).toEqual('test');
+  });
+
+  it('should return default value for single input', () => {
+    const { result } = renderHook(() => {
+      const { control } = useForm<{ test: string; test1: string }>({
+        defaultValues: {
+          test: 'test',
+          test1: 'test1',
+        },
       });
-
-      expect(result.current).toEqual(['test', 'test1']);
-    });
-
-    it('should return default value when name is undefined', () => {
-      const { result } = renderHook(() => {
-        const { control } = useForm<{ test: string; test1: string }>({
-          defaultValues: {
-            test: 'test',
-            test1: 'test1',
-          },
-        });
-        return useWatch({
-          control,
-        });
+      return useWatch({
+        control,
+        name: 'test',
       });
-
-      expect(result.current).toEqual({ test: 'test', test1: 'test1' });
     });
 
-    it('should return empty array when watch array fields', () => {
-      const { result } = renderHook(() => {
-        const { control } = useForm<{ test: string }>();
-        return useWatch({
-          control,
-          name: ['test'],
-        });
+    expect(result.current).toEqual('test');
+  });
+
+  it('should return default values for array of inputs', () => {
+    const { result } = renderHook(() => {
+      const { control } = useForm<{ test: string; test1: string }>({
+        defaultValues: {
+          test: 'test',
+          test1: 'test1',
+        },
       });
-
-      expect(result.current).toEqual([undefined]);
-    });
-
-    it('should return undefined', () => {
-      const { result } = renderHook(() => {
-        const { control } = useForm<{ test: string }>();
-        return useWatch({
-          control,
-          name: 'test',
-        });
+      return useWatch({
+        control,
+        name: ['test', 'test1'],
       });
-
-      expect(result.current).toBeUndefined();
     });
 
-    it('should render with FormProvider', () => {
-      const Provider: React.FC = ({ children }) => {
-        const methods = useForm<{ test: string }>();
-        return <FormProvider {...methods}>{children}</FormProvider>;
-      };
-      const { result } = renderHook(() => useWatch({ name: 'test' }), {
+    expect(result.current).toEqual(['test', 'test1']);
+  });
+
+  it('should return own default value for single input', () => {
+    const { result } = renderHook(() => {
+      const { control } = useForm<{ test: string; test1: string }>({});
+      return useWatch({
+        control,
+        name: 'test',
+        defaultValue: 'test',
+      });
+    });
+
+    expect(result.current).toEqual('test');
+  });
+
+  it('should return own default value for array of inputs', () => {
+    const { result } = renderHook(() => {
+      const { control } = useForm<{ test: string; test1: string }>({});
+      return useWatch({
+        control,
+        name: ['test', 'test1'],
+        defaultValue: {
+          test: 'test',
+          test1: 'test1',
+        },
+      });
+    });
+
+    expect(result.current).toEqual(['test', 'test1']);
+  });
+
+  it('should return default value when name is undefined', () => {
+    const { result } = renderHook(() => {
+      const { control } = useForm<{ test: string; test1: string }>({
+        defaultValues: {
+          test: 'test',
+          test1: 'test1',
+        },
+      });
+      return useWatch({
+        control,
+      });
+    });
+
+    expect(result.current).toEqual({ test: 'test', test1: 'test1' });
+  });
+
+  it('should return empty array when watch array fields', () => {
+    const { result } = renderHook(() => {
+      const { control } = useForm<{ test: string }>();
+      return useWatch({
+        control,
+        name: ['test'],
+      });
+    });
+
+    expect(result.current).toEqual([undefined]);
+  });
+
+  it('should return undefined', () => {
+    const { result } = renderHook(() => {
+      const { control } = useForm<{ test: string }>();
+      return useWatch({
+        control,
+        name: 'test',
+      });
+    });
+
+    expect(result.current).toBeUndefined();
+  });
+
+  it('should render with FormProvider', () => {
+    const Provider = ({ children }: { children: React.ReactNode }) => {
+      const methods = useForm<{ test: string }>();
+      return <FormProvider {...methods}>{children}</FormProvider>;
+    };
+    expect(() =>
+      renderHook(() => useWatch({ name: 'test' }), {
         wrapper: Provider,
+      }),
+    ).not.toThrow();
+  });
+
+  it('should remove input with shouldUnregister: true and deeply nested', async () => {
+    type FormValue = {
+      test: string;
+    };
+
+    let submitData = {};
+
+    const Child = ({
+      control,
+      register,
+    }: {
+      register: UseFormRegister<FormValue>;
+      control: Control<FormValue>;
+    }) => {
+      const show = useWatch({
+        control,
+        name: 'test',
       });
-      expect(result.error).toBeUndefined();
+
+      return <>{show && show !== 'test' && <input {...register('test')} />}</>;
+    };
+
+    const Component = () => {
+      const { register, control, handleSubmit } = useForm<FormValue>({
+        defaultValues: {
+          test: 'bill',
+        },
+        shouldUnregister: true,
+      });
+
+      return (
+        <form
+          onSubmit={handleSubmit((data) => {
+            submitData = data;
+          })}
+        >
+          <Child control={control} register={register} />
+          <button>submit</button>
+        </form>
+      );
+    };
+
+    render(<Component />);
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'test' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+
+    expect(submitData).toEqual({});
+  });
+
+  it('should return defaultValue with shouldUnregister set to true and keepDefaultValues', () => {
+    const output: unknown[] = [];
+
+    function App() {
+      const { register, reset, control } = useForm({
+        defaultValues: { test: 'test' },
+        shouldUnregister: true,
+      });
+      const inputs = useWatch({ control });
+
+      output.push(inputs);
+
+      return (
+        <form>
+          <input {...register('test')} />
+          <button
+            type="button"
+            onClick={() => reset(undefined, { keepDefaultValues: true })}
+          >
+            Reset
+          </button>
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'test' },
+    });
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(output).toEqual([
+      { test: 'test' },
+      { test: 'test' },
+      { test: 'test' },
+      { test: 'test' },
+      { test: 'test' },
+    ]);
+  });
+
+  it('should subscribe to exact input change', () => {
+    const App = () => {
+      const { control, register } = useForm();
+      const value = useWatch({
+        name: 'test',
+        control,
+        exact: true,
+        defaultValue: 'test',
+      });
+
+      return (
+        <div>
+          <input {...register('test.0.data')} />
+          <p>{value}</p>
+        </div>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: {
+        value: '1234',
+      },
+    });
+
+    expect(screen.getByText('test')).toBeVisible();
+  });
+
+  it('should return root object subscription', () => {
+    function App() {
+      const { register, control } = useForm({
+        defaultValues: { field: { firstName: 'value' } },
+      });
+      const field = useWatch({ control, name: 'field' });
+
+      return (
+        <div>
+          <form>
+            <input {...register('field.firstName')} placeholder="First Name" />
+            <p>{field.firstName}</p>
+          </form>
+        </div>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: {
+        value: '123',
+      },
+    });
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: {
+        value: '234',
+      },
+    });
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: {
+        value: '345',
+      },
+    });
+
+    expect(screen.getByText('345')).toBeVisible();
+  });
+
+  describe('when disabled prop is used', () => {
+    it('should be able to disabled subscription and started with true', async () => {
+      type FormValues = {
+        test: string;
+      };
+
+      const ChildComponent = ({
+        control,
+      }: {
+        control: Control<FormValues>;
+      }) => {
+        const [disabled, setDisabled] = React.useState(true);
+        const test = useWatch({
+          control,
+          name: 'test',
+          disabled,
+        });
+
+        return (
+          <div>
+            <p>{test}</p>
+            <button
+              onClick={() => {
+                setDisabled(!disabled);
+              }}
+              type={'button'}
+            >
+              toggle
+            </button>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const { register, control } = useForm<FormValues>({
+          defaultValues: {
+            test: 'test',
+          },
+        });
+
+        return (
+          <div>
+            <input {...register('test')} />
+            <ChildComponent control={control} />
+          </div>
+        );
+      };
+
+      render(<App />);
+
+      fireEvent.change(screen.getByRole('textbox'), {
+        target: {
+          value: 'what',
+        },
+      });
+
+      expect(screen.getByText('test')).toBeVisible();
+
+      fireEvent.click(screen.getByRole('button'));
+
+      fireEvent.change(screen.getByRole('textbox'), {
+        target: {
+          value: 'what12345',
+        },
+      });
+
+      expect(screen.getByText('what12345')).toBeVisible();
+
+      fireEvent.click(screen.getByRole('button'));
+
+      fireEvent.change(screen.getByRole('textbox'), {
+        target: {
+          value: '12345',
+        },
+      });
+
+      expect(screen.getByText('what12345')).toBeVisible();
+    });
+
+    it('should be able to toggle the subscription and started with false', async () => {
+      type FormValues = {
+        test: string;
+      };
+
+      const ChildComponent = ({
+        control,
+      }: {
+        control: Control<FormValues>;
+      }) => {
+        const [disabled, setDisabled] = React.useState(false);
+        const test = useWatch({
+          control,
+          name: 'test',
+          disabled,
+        });
+
+        return (
+          <div>
+            <p>{test}</p>
+            <button
+              onClick={() => {
+                setDisabled(!disabled);
+              }}
+              type={'button'}
+            >
+              toggle
+            </button>
+          </div>
+        );
+      };
+
+      const WatchApp = () => {
+        const { register, control } = useForm<FormValues>({
+          defaultValues: {
+            test: 'test',
+          },
+        });
+
+        return (
+          <div>
+            <input {...register('test')} />
+            <ChildComponent control={control} />
+          </div>
+        );
+      };
+
+      render(<WatchApp />);
+
+      fireEvent.change(screen.getByRole('textbox'), {
+        target: {
+          value: 'what',
+        },
+      });
+
+      expect(screen.getByText('what')).toBeVisible();
+
+      fireEvent.click(screen.getByRole('button'));
+
+      fireEvent.change(screen.getByRole('textbox'), {
+        target: {
+          value: 'what12345',
+        },
+      });
+
+      expect(screen.getByText('what')).toBeVisible();
     });
   });
 
@@ -155,14 +495,17 @@ describe('useWatch', () => {
         parent: string;
       };
 
+      let childCount = 0;
       const Child = ({
         register,
         control,
       }: Pick<UseFormReturn<FormInputs>, 'register' | 'control'>) => {
         useWatch({ name: 'child', control });
+        childCount++;
         return <input {...register('child')} />;
       };
 
+      let parentCount = 0;
       const Parent = () => {
         const {
           register,
@@ -170,20 +513,18 @@ describe('useWatch', () => {
           control,
           formState: { errors },
         } = useForm<FormInputs>();
+        parentCount++;
         return (
-          <form onSubmit={handleSubmit(() => {})}>
-            <input {...register('parent')} />
-            <Child register={register} control={control} />
-            {errors.parent}
-            <button>submit</button>
+          <form onSubmit={handleSubmit(noop)}>
+            <>
+              <input {...register('parent')} />
+              <Child register={register} control={control} />
+              {errors.parent}
+              <button>submit</button>
+            </>
           </form>
         );
       };
-
-      const { renderCount } = perf<{
-        Parent: unknown;
-        Child: unknown;
-      }>(React);
 
       render(<Parent />);
 
@@ -193,34 +534,117 @@ describe('useWatch', () => {
         target: { value: 'test' },
       });
 
-      await wait(() => {
-        expect(renderCount.current.Parent).toBeRenderedTimes(1);
-        expect(renderCount.current.Child).toBeRenderedTimes(2);
+      expect(parentCount).toBe(1);
+      expect(childCount).toBe(2);
+
+      parentCount = 0;
+      childCount = 0;
+
+      fireEvent.submit(screen.getByRole('button', { name: /submit/i }));
+
+      await waitFor(() => expect(parentCount).toBe(1));
+      expect(childCount).toBe(1);
+
+      parentCount = 0;
+      childCount = 0;
+
+      fireEvent.input(childInput, { target: { value: 'test1' } });
+
+      expect(parentCount).toBe(0);
+      expect(childCount).toBe(1);
+    });
+
+    it('should partial re-render with array name and exact option', async () => {
+      type FormInputs = {
+        child: string;
+        childSecond: string;
+        parent: string;
+      };
+
+      let childCount = 0;
+      let childSecondCount = 0;
+      const Child = ({
+        register,
+        control,
+      }: Pick<UseFormReturn<FormInputs>, 'register' | 'control'>) => {
+        useWatch({ name: ['childSecond'], control });
+        childCount++;
+        return <input {...register('child')} />;
+      };
+
+      const ChildSecond = ({
+        register,
+        control,
+      }: Pick<UseFormReturn<FormInputs>, 'register' | 'control'>) => {
+        useWatch({ name: ['childSecond'], control, exact: true });
+        childSecondCount++;
+        return <input {...register('childSecond')} />;
+      };
+
+      let parentCount = 0;
+      const Parent = () => {
+        const {
+          register,
+          handleSubmit,
+          control,
+          formState: { errors },
+        } = useForm<FormInputs>();
+        parentCount++;
+        return (
+          <form onSubmit={handleSubmit(noop)}>
+            <>
+              <input {...register('parent')} />
+              <Child register={register} control={control} />
+              <ChildSecond register={register} control={control} />
+              {errors.parent}
+              <button>submit</button>
+            </>
+          </form>
+        );
+      };
+
+      render(<Parent />);
+
+      const childInput = screen.getAllByRole('textbox')[1];
+      const childSecondInput = screen.getAllByRole('textbox')[2];
+
+      fireEvent.input(childInput, {
+        target: { value: 'test' },
       });
 
-      renderCount.current.Parent!.value = 0;
-      renderCount.current.Child!.value = 0;
+      expect(parentCount).toBe(1);
+      expect(childCount).toBe(2);
+      expect(childSecondCount).toBe(1);
 
-      await actComponent(async () => {
-        await fireEvent.submit(screen.getByRole('button', { name: /submit/i }));
-      });
+      parentCount = 0;
+      childCount = 0;
+      childSecondCount = 0;
 
-      await wait(() => {
-        expect(renderCount.current.Parent).toBeRenderedTimes(2);
-        expect(renderCount.current.Child).toBeRenderedTimes(2);
-      });
+      fireEvent.submit(screen.getByRole('button', { name: /submit/i }));
 
-      renderCount.current.Parent!.value = 0;
-      renderCount.current.Child!.value = 0;
+      await waitFor(() => expect(parentCount).toBe(1));
+      expect(childCount).toBe(1);
+      expect(childSecondCount).toBe(1);
 
-      await actComponent(async () => {
-        await fireEvent.input(childInput, { target: { value: 'test1' } });
-      });
+      parentCount = 0;
+      childCount = 0;
+      childSecondCount = 0;
 
-      await wait(() => {
-        expect(renderCount.current.Parent).toBeRenderedTimes(0);
-        expect(renderCount.current.Child).toBeRenderedTimes(1);
-      });
+      fireEvent.input(childInput, { target: { value: 'test1' } });
+
+      expect(parentCount).toBe(0);
+      expect(childCount).toBe(1);
+      expect(childSecondCount).toBe(0);
+
+      parentCount = 0;
+      childCount = 0;
+      childSecondCount = 0;
+
+      fireEvent.input(childSecondInput, { target: { value: 'test2' } });
+
+      expect(parentCount).toBe(0);
+      expect(childCount).toBe(1);
+      expect(childSecondCount).toBe(1);
     });
 
     it('should only subscribe change at useWatch level instead of useForm', () => {
@@ -304,8 +728,6 @@ describe('useWatch', () => {
         );
       };
 
-      const { renderCount } = perf<{ Parent: unknown; Child: unknown }>(React);
-
       render(<Parent />);
 
       fireEvent.input(screen.getAllByRole('textbox')[1], {
@@ -314,8 +736,6 @@ describe('useWatch', () => {
           value: 'value',
         },
       });
-
-      await wait(() => expect(renderCount.current.Parent).toBeRenderedTimes(1));
     });
 
     it('should not throw error when null or undefined is set', () => {
@@ -371,13 +791,11 @@ describe('useWatch', () => {
         },
       });
 
-      screen.getByText('test');
+      expect(screen.getByText('test')).toBeVisible();
 
-      await actComponent(async () => {
-        await fireEvent.click(screen.getByRole('button'));
-      });
+      fireEvent.click(screen.getByRole('button'));
 
-      expect(screen.queryByText('test')).toBeNull();
+      expect(screen.queryByText('test')).not.toBeInTheDocument();
     });
 
     it('should return undefined when input get unregistered', () => {
@@ -417,7 +835,7 @@ describe('useWatch', () => {
 
       fireEvent.click(screen.getByRole('button'));
 
-      screen.getByText('yes');
+      expect(screen.getByText('yes')).toBeVisible();
     });
   });
 
@@ -512,7 +930,188 @@ describe('useWatch', () => {
         'Totals',
         'Type',
         'Totals',
+        'Type',
+        'Totals',
       ]);
+    });
+
+    it('should return shallow merged watch values', () => {
+      const watchedValue: unknown[] = [];
+
+      function App() {
+        const methods = useForm({
+          defaultValues: {
+            name: 'foo',
+            arr: [],
+          },
+          mode: 'onSubmit',
+          reValidateMode: 'onChange',
+          criteriaMode: 'all',
+          shouldUnregister: false,
+        });
+
+        return (
+          <FormProvider {...methods}>
+            <input {...methods.register('name')} placeholder="First Name" />
+            <Preview />
+            <FieldArray />
+            <input type="submit" />
+          </FormProvider>
+        );
+      }
+
+      function Preview() {
+        const form = useWatch({});
+        watchedValue.push(form);
+
+        return null;
+      }
+
+      function FieldArray() {
+        useFieldArray({
+          name: 'arr',
+          shouldUnregister: false,
+        });
+
+        return null;
+      }
+
+      render(<App />);
+
+      expect(watchedValue).toEqual([
+        {
+          arr: [],
+          name: 'foo',
+        },
+        {
+          arr: [],
+          name: 'foo',
+        },
+      ]);
+    });
+  });
+
+  describe('fieldArray with shouldUnregister true', () => {
+    it('should watch correct input update with single field array input', async () => {
+      const watchData: unknown[] = [];
+
+      type Unpacked<T> = T extends (infer U)[] ? U : T;
+
+      type FormValues = {
+        items: { prop: string }[];
+      };
+
+      function App() {
+        const rhfProps = useForm<FormValues>({
+          defaultValues: {
+            items: [{ prop: 'test' }, { prop: 'test1' }],
+          },
+          shouldUnregister: true,
+        });
+        const { control } = rhfProps;
+
+        const { fields, insert, remove } = useFieldArray({
+          control,
+          name: 'items',
+        });
+
+        return (
+          <form>
+            {fields.map((item, index) => {
+              return (
+                <div key={item.id}>
+                  <Child control={control} index={index} itemDefault={item} />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      insert(index + 1, { prop: 'ShouldBeTHere' });
+                    }}
+                  >
+                    insert
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      remove(index);
+                    }}
+                  >
+                    remove
+                  </button>
+                </div>
+              );
+            })}
+            <Watcher itemsDefault={fields} control={control} />
+            <input type="submit" />
+          </form>
+        );
+      }
+
+      function Watcher({
+        itemsDefault,
+        control,
+      }: {
+        itemsDefault: FormValues['items'];
+        control: Control<FormValues>;
+      }) {
+        const useWatchedItems = useWatch({
+          name: 'items',
+          control,
+          defaultValue: itemsDefault,
+        });
+
+        watchData.push(useWatchedItems);
+
+        return (
+          <div>
+            {useWatchedItems.map((item, index) => {
+              return (
+                <p key={index}>
+                  Value {index}: {item.prop}
+                </p>
+              );
+            })}
+          </div>
+        );
+      }
+
+      function Child({
+        index,
+        itemDefault,
+        control,
+      }: {
+        index: number;
+        itemDefault: Unpacked<FormValues['items']>;
+        control: Control<FormValues>;
+      }) {
+        const { field } = useController({
+          name: `items.${index}.prop` as const,
+          control,
+          defaultValue: itemDefault.prop,
+        });
+
+        return <input {...field} />;
+      }
+
+      render(<App />);
+
+      expect(screen.getByText('Value 0: test')).toBeVisible();
+      expect(screen.getByText('Value 1: test1')).toBeVisible();
+      expect(
+        screen.queryByText('Value 1: ShouldBeTHere'),
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getAllByRole('button', { name: 'insert' })[0]);
+
+      expect(await screen.findByText('Value 1: ShouldBeTHere')).toBeVisible();
+      expect(screen.getByText('Value 2: test1')).toBeVisible();
+
+      fireEvent.click(screen.getAllByRole('button', { name: 'remove' })[0]);
+
+      expect(
+        screen.queryByText('Value 2: ShouldBeTHere'),
+      ).not.toBeInTheDocument();
+
+      expect(watchData).toMatchSnapshot();
     });
   });
 
@@ -551,7 +1150,7 @@ describe('useWatch', () => {
 
       render(<Component />);
 
-      await waitFor(() => screen.getByText('test'));
+      expect(await screen.findByText('test')).toBeVisible();
     });
 
     it('should return default value of reset method', async () => {
@@ -616,34 +1215,55 @@ describe('useWatch', () => {
 
       render(<Component />);
 
-      screen.getByText('firstName');
+      expect(screen.getByText('firstName')).toBeVisible();
 
-      await actComponent(async () => {
-        fireEvent.change(screen.getByRole('textbox'), {
-          target: { value: '123' },
-        });
+      fireEvent.change(screen.getByRole('textbox'), {
+        target: { value: '123' },
       });
 
-      screen.getByText('123');
+      expect(screen.getByText('123')).toBeVisible();
+    });
+
+    it('should fallback to inline defaultValue with reset API', () => {
+      const App = () => {
+        const { control, reset } = useForm();
+        const value = useWatch({
+          name: 'test',
+          defaultValue: 'yes',
+          control,
+        });
+
+        React.useEffect(() => {
+          reset({});
+        }, [reset]);
+
+        return <p>{value ? 'yes' : 'no'}</p>;
+      };
+
+      render(<App />);
+
+      expect(screen.getByText('yes')).toBeVisible();
     });
 
     describe('with useFieldArray', () => {
       // issue: https://github.com/react-hook-form/react-hook-form/issues/2229
-      it('should return current value with radio type', async () => {
+      it('should return current value with radio type', () => {
         type FormValues = {
           options: { option: string }[];
         };
-
         const watchedValue: object[] = [];
 
         const Test = ({ control }: { control: Control<FormValues> }) => {
-          watchedValue.push(
-            useWatch({
-              control,
-            }),
-          );
+          const values = useWatch({ control });
+          const options = values.options;
+          watchedValue.push(values);
 
-          return null;
+          return (
+            <div>
+              <p>First: {options?.[0].option}</p>
+              <p>Second: {options?.[1].option}</p>
+            </div>
+          );
         };
 
         const Component = () => {
@@ -666,33 +1286,46 @@ describe('useWatch', () => {
           return (
             <form>
               {fields.map((_, i) => (
-                <div key={i.toString()}>
-                  <input
-                    type="radio"
-                    value="yes"
-                    {...register(`options.${i}.option` as const)}
-                  />
-                  <input
-                    type="radio"
-                    value="no"
-                    {...register(`options.${i}.option` as const)}
-                  />
-                  <Test control={control} />
+                <div key={i.toString()} data-testid={`field-${i}`}>
+                  <label>
+                    Yes
+                    <input
+                      type="radio"
+                      value="yes"
+                      {...register(`options.${i}.option` as const)}
+                    />
+                  </label>
+                  <label>
+                    No
+                    <input
+                      type="radio"
+                      value="no"
+                      {...register(`options.${i}.option` as const)}
+                    />
+                  </label>
                 </div>
               ))}
+              <Test control={control} />
             </form>
           );
         };
 
         render(<Component />);
 
-        fireEvent.change(screen.getAllByRole('radio')[1], {
-          target: {
-            value: 'yes',
-            checked: true,
-          },
-        });
+        const firstField = screen.getByTestId('field-0');
+        expect(within(firstField).getByLabelText('Yes')).toBeChecked();
+        expect(screen.getByText('First: yes')).toBeVisible();
 
+        const secondField = screen.getByTestId('field-1');
+        expect(within(secondField).getByLabelText('Yes')).toBeChecked();
+        expect(screen.getByText('Second: yes')).toBeVisible();
+
+        fireEvent.click(within(firstField).getByLabelText('No'));
+
+        expect(screen.getByText('First: no')).toBeVisible();
+        expect(screen.getByText('Second: yes')).toBeVisible();
+
+        // Let's check all values of renders with implicitly the number of render (for each value)
         expect(watchedValue).toMatchSnapshot();
       });
 
@@ -874,13 +1507,11 @@ describe('useWatch', () => {
 
       render(<Form />);
 
-      screen.getByText('test');
+      expect(screen.getByText('test')).toBeVisible();
 
-      await actComponent(async () => {
-        fireEvent.click(screen.getByRole('button'));
-      });
+      fireEvent.click(screen.getByRole('button'));
 
-      screen.getByText('no');
+      expect(screen.getByText('no')).toBeVisible();
     });
   });
 
@@ -888,11 +1519,7 @@ describe('useWatch', () => {
     it('should return correct value after input get unregistered', async () => {
       type FormValues = { test: string };
 
-      const Child = ({ register, setValue }: UseFormReturn<FormValues>) => {
-        React.useEffect(() => {
-          setValue('test', 'bill');
-        }, [setValue]);
-
+      const Child = ({ register }: UseFormReturn<FormValues>) => {
         return <input {...register('test')} />;
       };
 
@@ -906,6 +1533,10 @@ describe('useWatch', () => {
           defaultValues: { test: 'test' },
         });
 
+        React.useEffect(() => {
+          methods.setValue('test', 'bill');
+        }, [methods]);
+
         return (
           <>
             <Component control={methods.control} />
@@ -916,7 +1547,31 @@ describe('useWatch', () => {
 
       render(<Form />);
 
-      await waitFor(async () => screen.getByText('no'));
+      expect(await screen.findByText('no')).toBeVisible();
+    });
+
+    it('should keep set type after set value', async () => {
+      const Form = () => {
+        const { control, setValue } = useForm({
+          defaultValues: { test: new Set(['test']) },
+        });
+        const { field } = useController({
+          control,
+          name: 'test',
+        });
+
+        React.useEffect(() => {
+          setValue('test', new Set(['test']));
+        }, [setValue]);
+
+        return <>{field.value instanceof Set ? 'yes' : 'no'}</>;
+      };
+
+      render(<Form />);
+
+      await waitFor(() => {
+        screen.getByText('yes');
+      });
     });
 
     it('should watch nested object field update', () => {
@@ -976,7 +1631,7 @@ describe('useWatch', () => {
 
       fireEvent.click(screen.getByRole('button'));
 
-      screen.getByText('333');
+      expect(screen.getByText('333')).toBeVisible();
 
       expect((screen.getByRole('textbox') as HTMLInputElement).value).toEqual(
         '333',

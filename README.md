@@ -1,17 +1,7 @@
 <div align="center">
-    <p align="center">
         <a href="https://react-hook-form.com" title="React Hook Form - Simple React forms validation">
             <img src="https://raw.githubusercontent.com/react-hook-form/react-hook-form/master/docs/logo.png" alt="React Hook Form Logo - React hook custom hook for form validation" />
         </a>
-    </p>
-</div>
-
-<div align="center">
-    <p align="center">
-        <a href="https://react-hook-form.com" title="React Hook Form - Simple React forms validation">
-            <img src="https://raw.githubusercontent.com/bluebill1049/react-hook-form/master/docs/v7_example.gif" alt="React Hook Form video - React custom hook for form validation" width="100%" />
-        </a>
-    </p>
 </div>
 
 <div align="center">
@@ -23,34 +13,29 @@
 
 </div>
 
-Version 7 | [Version 6](/docs/README.V6.md)
+<p align="center">
+  <a href="https://react-hook-form.com/get-started">Get started</a> | 
+  <a href="https://react-hook-form.com/docs">API</a> |
+  <a href="https://react-hook-form.com/form-builder">Form Builder</a> |
+  <a href="https://react-hook-form.com/faqs">FAQs</a> |
+  <a href="https://github.com/react-hook-form/react-hook-form/tree/master/examples">Examples</a>
+</p>
 
-## Features
+### Features
 
-- Built with performance and DX in mind
-- Embraces native form validation
+- Built with performance, UX and DX in mind
+- Embraces native HTML form [validation](https://react-hook-form.com/get-started#Applyvalidation)
 - Out of the box integration with [UI libraries](https://codesandbox.io/s/react-hook-form-v7-controller-5h1q5)
 - [Small size](https://bundlephobia.com/result?p=react-hook-form@latest) and no [dependencies](./package.json)
-- Follows HTML standard for [validation](https://react-hook-form.com/get-started#Applyvalidation)
-- [Validation resolver](https://github.com/react-hook-form/resolvers) support for [Yup](https://github.com/jquense/yup), [Zod](https://github.com/vriad/zod), [Superstruct](https://github.com/ianstormtaylor/superstruct), [Joi](https://github.com/hapijs/joi), [Vest](https://github.com/ealush/vest) or custom
+- Support [Yup](https://github.com/jquense/yup), [Zod](https://github.com/colinhacks/zod), [AJV](https://github.com/ajv-validator/ajv), [Superstruct](https://github.com/ianstormtaylor/superstruct), [Joi](https://github.com/hapijs/joi) and [others](https://github.com/react-hook-form/resolvers)
 
-## Install
+### Install
 
     npm install react-hook-form
 
-## Links
-
-- [Get started](https://react-hook-form.com/get-started)
-- [API](https://react-hook-form.com/api)
-- [Examples](https://github.com/bluebill1049/react-hook-form/tree/master/examples)
-- [Demo](https://react-hook-form.com)
-- [Form Builder](https://react-hook-form.com/form-builder)
-- [FAQs](https://react-hook-form.com/faqs)
-
-## Quickstart
+### Quickstart
 
 ```jsx
-import React from 'react';
 import { useForm } from 'react-hook-form';
 
 function App() {
@@ -59,11 +44,10 @@ function App() {
     handleSubmit,
     formState: { errors },
   } = useForm();
-  const onSubmit = (data) => console.log(data);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <input {...register('firstName')} /> {/* register an input */}
+    <form onSubmit={handleSubmit((data) => console.log(data))}>
+      <input {...register('firstName')} />
       <input {...register('lastName', { required: true })} />
       {errors.lastName && <p>Last name is required.</p>}
       <input {...register('age', { pattern: /\d+/ })} />
@@ -78,189 +62,78 @@ function App() {
   <img src="https://raw.githubusercontent.com/react-hook-form/react-hook-form/master/docs/ads-1.jpeg" />
 </a>
 
-## Sponsors
+### Sponsors
 
-Thanks go to these kind and lovely sponsors (companies and individuals)!
+Thanks go to these kind and lovely sponsors!
 
-<a href="https://underbelly.is/" target="_blank">
-  <img src="https://images.opencollective.com/underbelly/989a4a6/logo/256.png" width="94" height="94" />
+<a target="_blank" href='https://route4me.com/'>
+    <img width="94" src="https://images.opencollective.com/route4me/71fb6fa/avatar/256.png?height=256" />
 </a>
+<a target="_blank" href='https://twicsy.com/'>
+    <img width="94" src="https://images.opencollective.com/buy-instagram-followers-twicsy/b4c5d7f/logo/256.png?height=256" />
+</a>
+<a target="_blank" href='https://toss.im'>
+    <img width="94" src="https://images.opencollective.com/toss/3ed69b3/logo/256.png" />
+</a>
+<a target="_blank" href='https://principal.com/about-us'>
+    <img width="94" src="https://images.opencollective.com/principal/431e690/logo/256.png?height=256" />
+</a>
+<a target="_blank" href="https://graphcms.com">
+    <img width="94" src="https://avatars.githubusercontent.com/u/31031438" />
+</a>
+<a target="_blank" href="https://www.beekai.com/">
+    <img width="94" src="https://www.beekai.com/marketing/logo/logo.svg" />
+</a>
+<a target="_blank" href="https://kanamekey.com">
+    <img width="94" src="https://images.opencollective.com/kaname/d15fd98/logo/256.png" />
+</a>
+<a target="_blank" href="https://www.casinoreviews.net/">
+    <img width="94" src="https://images.opencollective.com/casinoreviews/f0877d1/logo/256.png" />
+</a>
+
+### Past sponsors
+
 <a href="https://www.leniolabs.com/" target="_blank">
-  <img src="https://images.opencollective.com/leniolabs_/63e9b6e/logo/256.png" width="94" height="94" />
+  <img src="https://images.opencollective.com/leniolabs_/63e9b6e/logo/256.png" width="48" height="48" />
+</a>
+<a target="_blank" href="https://underbelly.is">
+    <img width="48" src="https://images.opencollective.com/underbelly/989a4a6/logo/256.png" />
+</a>
+<a target="_blank" href="https://feathery.io">
+    <img width="48" src="https://images.opencollective.com/feathery1/c29b0a1/logo/256.png" />
+</a>
+<a target="_blank" href="https://getform.io">
+    <img width="48" src="https://images.opencollective.com/getformio2/3c978c8/avatar/256.png" />
+</a>
+<a href="https://marmelab.com/" target="_blank">
+  <img src="https://images.opencollective.com/marmelab/d7fd82f/logo/256.png" width="48" height="48" />
+</a>
+<a target="_blank" href="https://formcarry.com/">
+    <img width="48" src="https://images.opencollective.com/formcarry/a40a4ea/logo/256.png" />
+</a>
+<a target="_blank" href="https://fabform.io">
+    <img width="48" src="https://images.opencollective.com/fabform/2834037/logo/256.png" />
+</a>
+<a target="_blank" href="https://www.thinkmill.com.au/">
+    <img width="48" src="https://images.opencollective.com/thinkmill/28910ec/logo/256.png" />
+</a>
+<a target="_blank" href="https://kwork.studio/">
+    <img width="48" src="https://images.opencollective.com/knowledge-work/f91b72d/logo/256.png" />
+</a>
+<a target="_blank" href="https://fiberplane.com/">
+    <img width="48" src="https://avatars.githubusercontent.com/u/61152955?s=200&v=4" />
+</a>
+<a target="_blank" href="https://www.jetbrains.com/">
+    <img width="48" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" />
+</a>
+<a target="_blank" href="https://www.mirakl.com/">
+    <img width="48" src="https://images.opencollective.com/mirakl/0b191f0/logo/256.png" />
+</a>
+<a target="_blank" href='https://wantedlyinc.com'>
+    <img width="48" src="https://images.opencollective.com/wantedly/d94e44e/logo/256.png" />
 </a>
 
-<p>
-    <a href="https://github.com/sayav"
-    ><img
-            src="https://avatars1.githubusercontent.com/u/42376060?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@sayav"
-    /></a>
-    <a href="https://github.com/lemcii"
-    ><img
-            src="https://avatars1.githubusercontent.com/u/35668113?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@lemcii"
-    /></a>
-    <a href="https://github.com/washingtonsoares"
-    ><img
-            src="https://avatars.githubusercontent.com/u/5726140?v=4"
-            width="45"
-            height="45"
-            alt="@washingtonsoares"
-    /></a>
-    <a href="https://github.com/lixunn"
-    ><img
-            src="https://avatars.githubusercontent.com/u/4017964?v=4"
-            width="45"
-            height="45"
-            alt="@lixunn"
-    /></a>
-    <a href="https://github.com/SamSamskies"
-    ><img
-            src="https://avatars2.githubusercontent.com/u/3655410?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@SamSamskies"
-    /></a>
-    <a href="https://github.com/peaonunes"
-    ><img
-            src="https://avatars2.githubusercontent.com/u/3356720?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@peaonunes"
-    /></a>
-    <a href="https://github.com/wilhelmeek"
-    ><img
-            src="https://avatars2.githubusercontent.com/u/609452?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@wilhelmeek"
-    /></a>
-    <a href="https://github.com/iwarner"
-    ><img
-            src="https://avatars2.githubusercontent.com/u/279251?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@iwarner"
-    /></a>
-    <a href="https://github.com/joejknowles"
-    ><img
-            src="https://avatars2.githubusercontent.com/u/10728145?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@joejknowles"
-    /></a>
-    <a href="https://github.com/chris-gunawardena"
-    ><img
-            src="https://avatars0.githubusercontent.com/u/5763108?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@chris-gunawardena"
-    /></a>
-    <a href="https://github.com/Tymek"
-    ><img
-            src="https://avatars1.githubusercontent.com/u/2625371?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@Tymek"
-    /></a>
-    <a href="https://github.com/Luchanso"
-    ><img
-            src="https://avatars0.githubusercontent.com/u/2098777?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@Luchanso"
-    /></a>
-    <a href="https://github.com/vcarel"
-    ><img
-            src="https://avatars1.githubusercontent.com/u/1541093?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@vcarel"
-    /></a>
-    <a href="https://github.com/gragland"
-    ><img
-            src="https://avatars0.githubusercontent.com/u/1481077?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@gragland"
-    /></a>
-    <a href="https://github.com/tjshipe"
-    ><img
-            src="https://avatars2.githubusercontent.com/u/1254942?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@tjshipe"
-    /></a>
-    <a href="https://github.com/krnlde"
-    ><img
-            src="https://avatars1.githubusercontent.com/u/1087002?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@krnlde"
-    /></a>
-    <a href="https://github.com/msutkowski"
-    ><img
-            src="https://avatars2.githubusercontent.com/u/784953?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@msutkowski"
-    /></a>
-    <a href="https://github.com/mlukaszczyk"
-    ><img
-            src="https://avatars3.githubusercontent.com/u/599247?s=60&amp;v=4"
-            width="45"
-            height="45"
-            alt="@mlukaszczyk"
-    /></a>
-    <a href="https://github.com/susshma"
-    ><img
-            src="https://avatars0.githubusercontent.com/u/2566818?s=460&u=754ee26b96e321ff28dbc4a2744132015f534fe0&v=4"
-            width="45"
-            height="45"
-    /></a>
-    <a href="https://github.com/MatiasCiccone"
-    ><img
-            src="https://avatars3.githubusercontent.com/u/32602795?s=460&u=6a0c4dbe23c4f9a5628dc8867842b75989ecc4aa&v=4"
-            width="45"
-            height="45"
-    /></a>
-    <a href="https://github.com/ghostwriternr"
-    ><img
-            src="https://avatars0.githubusercontent.com/u/10023615?s=460&u=3ec1e4ba991699762fd22a9d9ef47a0599f937dc&v=4"
-            width="45"
-            height="45"
-    /></a>
-    <a href="https://github.com/neighborhood999"
-    ><img
-            src="https://avatars3.githubusercontent.com/u/10325111?s=450&u=f60c932f81d95a60f77f5c7f2eab4590e07c29af&v=4"
-            width="45"
-            height="45"
-    /></a>
-    <a href="https://github.com/yjp20"
-    ><img
-            src="https://avatars3.githubusercontent.com/u/44457064?s=460&u=a55119c84e0167f6a3f830dbad3133b28f0c0a8f&v=4"
-            width="45"
-            height="45"
-    /></a>
-    <a href="https://github.com/samantha-wong"
-    ><img
-            src="https://avatars.githubusercontent.com/u/19571028?s=460&u=7421a02f600646b5836d5973359a257950cae8c4&v=4"
-            width="45"
-            height="45"
-    /></a>
-    <a href="https://github.com/msc-insure"
-    ><img
-            src="https://avatars.githubusercontent.com/u/44406870?s=200&v=4"
-            width="45"
-            height="45"
-    /></a>
-</p>
-
-## Backers
+### Backers
 
 Thanks go to all our backers! [[Become a backer](https://opencollective.com/react-hook-form#backer)].
 
@@ -268,15 +141,7 @@ Thanks go to all our backers! [[Become a backer](https://opencollective.com/reac
     <img src="https://opencollective.com/react-hook-form/backers.svg?width=950" />
 </a>
 
-## Organizations
-
-Thanks go to these wonderful organizations! [[Contribute](https://opencollective.com/react-hook-form/contribute)].
-
-<a href="https://github.com/react-hook-form/react-hook-form/graphs/contributors">
-    <img src="https://opencollective.com/react-hook-form/organizations.svg?width=890" />
-</a>
-
-## Contributors
+### Contributors
 
 Thanks go to these wonderful people! [[Become a contributor](CONTRIBUTING.md)].
 

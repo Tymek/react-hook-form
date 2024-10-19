@@ -2,7 +2,7 @@ import appendErrors from '../../logic/appendErrors';
 
 describe('appendErrors', () => {
   it('should return empty object when validateAllFieldCriteria is false', () => {
-    const errors: any = {
+    const errors = {
       test: {
         type: 'required',
         message: 'test',
@@ -12,10 +12,11 @@ describe('appendErrors', () => {
   });
 
   it('should return error object when validateAllFieldCriteria is true', () => {
-    const errors: any = {
+    const errors = {
       test: {
         type: 'required',
         message: 'test',
+        types: {},
       },
     };
 
@@ -57,6 +58,28 @@ describe('appendErrors', () => {
         min: 'test',
         max: 'test',
         undefined: true,
+      },
+    });
+
+    errors.test.types = {
+      ...errors.test.types,
+      undefined: true,
+    };
+    expect(
+      appendErrors('test', true, errors, 'invalid_string', [
+        'uppercase',
+        'lowercase',
+        'number',
+      ]),
+    ).toEqual({
+      message: 'test',
+      type: 'required',
+      types: {
+        required: 'test',
+        min: 'test',
+        max: 'test',
+        undefined: true,
+        invalid_string: ['uppercase', 'lowercase', 'number'],
       },
     });
   });

@@ -5,7 +5,11 @@ import { useForm } from 'react-hook-form';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function App() {
-  const { register, handleSubmit, errors } = useForm();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
   const onSubmit = (data) => {
     alert(JSON.stringify(data));
   };
@@ -18,6 +22,7 @@ export default function App() {
         <div>
           <label htmlFor="username">User Name</label>
           <input
+            id="username"
             placeholder="Bill"
             {...register('username', {
               validate: async (value) => {
@@ -30,12 +35,13 @@ export default function App() {
 
         <div>
           <label htmlFor="lastName">Last Name</label>
-          <input placeholder="Luo" {...register('lastName')} />
+          <input id="lastName" placeholder="Luo" {...register('lastName')} />
         </div>
 
         <div>
           <label htmlFor="email">Email</label>
           <input
+            id="email"
             placeholder="bluebill1049@hotmail.com"
             type="text"
             {...register('email')}

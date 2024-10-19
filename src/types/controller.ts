@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 
 import { RegisterOptions } from './validator';
 import {
@@ -7,6 +7,8 @@ import {
   FieldPath,
   FieldPathValue,
   FieldValues,
+  Noop,
+  RefCallBack,
   UseFormStateReturn,
 } from './';
 
@@ -20,38 +22,64 @@ export type ControllerFieldState = {
 
 export type ControllerRenderProps<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > = {
   onChange: (...event: any[]) => void;
-  onBlur: () => void;
+  onBlur: Noop;
   value: FieldPathValue<TFieldValues, TName>;
+  disabled?: boolean;
   name: TName;
-  ref: React.Ref<any>;
+  ref: RefCallBack;
 };
 
 export type UseControllerProps<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > = {
   name: TName;
-  rules?: Omit<RegisterOptions, 'valueAsNumber' | 'valueAsDate' | 'setValueAs'>;
+  rules?: Omit<
+    RegisterOptions<TFieldValues, TName>,
+    'valueAsNumber' | 'valueAsDate' | 'setValueAs' | 'disabled'
+  >;
   shouldUnregister?: boolean;
-  defaultValue?: unknown;
+  defaultValue?: FieldPathValue<TFieldValues, TName>;
   control?: Control<TFieldValues>;
+  disabled?: boolean;
 };
 
 export type UseControllerReturn<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > = {
   field: ControllerRenderProps<TFieldValues, TName>;
   formState: UseFormStateReturn<TFieldValues>;
   fieldState: ControllerFieldState;
 };
 
+/**
+ * Render function to provide the control for the field.
+ *
+ * @returns all the event handlers, and relevant field and form state.
+ *
+ * @example
+ * ```tsx
+ * const { field, fieldState, formState } = useController();
+ *
+ * <Controller
+ *   render={({ field, formState, fieldState }) => ({
+ *     <input
+ *       onChange={field.onChange}
+ *       onBlur={field.onBlur}
+ *       name={field.name}
+ *       ref={field.ref} // optional for focus management
+ *     />
+ *   })}
+ * />
+ * ```
+ */
 export type ControllerProps<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > = {
   render: ({
     field,

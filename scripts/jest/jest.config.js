@@ -1,75 +1,49 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
-const { defaults: tsjPresets } = require('ts-jest/presets');
-const jestPresets = require('@testing-library/react-native/jest-preset');
-
-const common = {
+const jestDefaultConfig = {
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true,
   rootDir: '.',
   roots: ['<rootDir>/src'],
-  transform: {
-    '^.+\\.tsx?$': 'ts-jest',
-  },
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.jest.json',
-    },
-  },
   transformIgnorePatterns: ['[/\\\\]node_modules[/\\\\].+\\.(js|jsx)$'],
-  moduleFileExtensions: ['ts', 'tsx', 'js'],
 };
 
 const web = {
-  ...common,
+  ...jestDefaultConfig,
   displayName: {
     name: 'Web',
     color: 'cyan',
   },
-  testMatch: ['**/__tests__/**/*.[jt]s?(x)'],
+  testMatch: ['**/__tests__/**/*.(spec|test).ts?(x)'],
+  transform: {
+    '^.+\\.tsx?$': '@swc/jest',
+    '^.+\\.(css|scss|sass)$': 'jest-preview/transforms/css',
+    '^(?!.*\\.(js|jsx|mjs|cjs|ts|tsx|css|json)$)':
+      'jest-preview/transforms/file',
+  },
   setupFilesAfterEnv: ['<rootDir>/scripts/jest/setup.ts'],
+  testEnvironment: 'jsdom',
+  testEnvironmentOptions: {
+    customExportConditions: [''],
+  },
 };
 
 const server = {
-  ...common,
+  ...jestDefaultConfig,
   displayName: {
     name: 'Server',
     color: 'blue',
   },
   testMatch: ['**/+([a-zA-Z]).server.(spec|test).ts?(x)'],
-  testEnvironment: 'node',
-};
-
-const native = {
-  ...common,
-  displayName: {
-    name: 'Native',
-    color: 'magenta',
-  },
-  preset: '@testing-library/react-native',
-  testMatch: ['**/+([a-zA-Z]).native.(spec|test).ts?(x)'],
   transform: {
-    ...tsjPresets.transform,
-    '^.+\\.tsx?$': 'ts-jest',
-    '^.+\\.jsx?$': '<rootDir>/node_modules/react-native/jest/preprocessor.js',
+    '^.+\\.tsx?$': '@swc/jest',
   },
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.jest.json',
-      babelConfig: true,
-    },
-  },
-  transformIgnorePatterns: [
-    '[/\\\\]node_modules[/\\\\](?!react-native)[/\\\\].+',
-  ],
-  setupFiles: [...jestPresets.setupFiles],
-  setupFilesAfterEnv: ['<rootDir>/scripts/jest/setup.native.ts'],
+  testEnvironment: 'node',
 };
 
 const getProjects = () => {
   const testEnv = process.env.TEST_ENV;
   if (!testEnv) {
-    return [web, server, native];
+    return [web, server];
   }
 
   switch (testEnv) {
@@ -77,8 +51,6 @@ const getProjects = () => {
       return [web];
     case 'server':
       return [server];
-    case 'native':
-      return [native];
   }
 };
 
@@ -89,6 +61,7 @@ module.exports = {
     '!**/src/types/**',
     '!**/node_modules/**',
     '!**/dist/**',
+    '!**/__tests__/**',
   ],
   projects: getProjects(),
 };

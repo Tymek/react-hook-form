@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { useForm, Control, useWatch, Controller } from 'react-hook-form';
 import { useRef } from 'react';
 
@@ -34,11 +34,7 @@ const GrandChild = ({
   );
 };
 
-const GrandChild1 = ({
-  control,
-}: {
-  control: Control<FormInputs>;
-}) => {
+const GrandChild1 = ({ control }: { control: Control<FormInputs> }) => {
   const counter = useRef(0);
   const output = useWatch<FormInputs>({
     name: ['test', 'test1'],

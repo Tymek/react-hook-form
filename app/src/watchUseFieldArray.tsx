@@ -1,5 +1,6 @@
 import React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { useParams } from 'react-router-dom';
 
 let renderCount = 0;
 
@@ -7,37 +8,37 @@ type FormInputs = {
   data: { name: string }[];
 };
 
-const WatchUseFieldArray: React.FC = (props: any) => {
+const WatchUseFieldArray: React.FC = () => {
+  const { mode } = useParams();
   const { control, handleSubmit, reset, watch, register } = useForm<FormInputs>(
     {
-      ...(props.match.params.mode === 'default'
+      ...(mode === 'default'
         ? {
             defaultValues: {
               data: [{ name: 'test' }, { name: 'test1' }, { name: 'test2' }],
             },
           }
         : {}),
-      mode: props.match.params.mode === 'formState' ? 'onChange' : 'onSubmit',
+      mode: mode === 'formState' ? 'onChange' : 'onSubmit',
     },
   );
-  const { fields, append, prepend, swap, move, insert, remove } = useFieldArray(
-    {
+  const { fields, append, prepend, swap, move, insert, remove, update } =
+    useFieldArray({
       control,
       name: 'data',
-    },
-  );
+    });
   const onSubmit = () => {};
   const watchAll = watch('data') || [];
 
   React.useEffect(() => {
     setTimeout(() => {
-      if (props.match.params.mode === 'asyncReset') {
+      if (mode === 'asyncReset') {
         reset({
           data: [{ name: 'test' }, { name: 'test1' }, { name: 'test2' }],
         });
       }
     }, 10);
-  }, [reset, props.match.params.mode]);
+  }, [reset, mode]);
 
   renderCount++;
 
@@ -48,7 +49,6 @@ const WatchUseFieldArray: React.FC = (props: any) => {
           <li key={data.id}>
             <input
               id={`field${index}`}
-              defaultValue={data.name}
               data-order={index}
               {...register(`data.${index}.name` as const)}
             />
@@ -73,6 +73,14 @@ const WatchUseFieldArray: React.FC = (props: any) => {
         onClick={() => prepend({ name: renderCount.toString() })}
       >
         prepend
+      </button>
+
+      <button
+        id="update"
+        type="button"
+        onClick={() => update(3, { name: 'updated value' })}
+      >
+        append
       </button>
 
       <button id="swap" onClick={() => swap(1, 2)} type="button">

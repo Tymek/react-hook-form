@@ -1,31 +1,22 @@
-export default ({
-  isOnBlur,
-  isOnChange,
-  isOnTouch,
-  isTouched,
-  isReValidateOnBlur,
-  isReValidateOnChange,
-  isBlurEvent,
-  isSubmitted,
-  isOnAll,
-}: {
-  isOnAll?: boolean;
-  isOnBlur?: boolean;
-  isOnChange?: boolean;
-  isReValidateOnBlur?: boolean;
-  isReValidateOnChange?: boolean;
-  isBlurEvent?: boolean;
-  isSubmitted?: boolean;
-  isOnTouch?: boolean;
-  isTouched?: boolean;
-}) => {
-  if (isOnAll) {
+import { ValidationModeFlags } from '../types';
+
+export default (
+  isBlurEvent: boolean,
+  isTouched: boolean,
+  isSubmitted: boolean,
+  reValidateMode: {
+    isOnBlur: boolean;
+    isOnChange: boolean;
+  },
+  mode: Partial<ValidationModeFlags>,
+) => {
+  if (mode.isOnAll) {
     return false;
-  } else if (!isSubmitted && isOnTouch) {
+  } else if (!isSubmitted && mode.isOnTouch) {
     return !(isTouched || isBlurEvent);
-  } else if (isSubmitted ? isReValidateOnBlur : isOnBlur) {
+  } else if (isSubmitted ? reValidateMode.isOnBlur : mode.isOnBlur) {
     return !isBlurEvent;
-  } else if (isSubmitted ? isReValidateOnChange : isOnChange) {
+  } else if (isSubmitted ? reValidateMode.isOnChange : mode.isOnChange) {
     return isBlurEvent;
   }
   return true;

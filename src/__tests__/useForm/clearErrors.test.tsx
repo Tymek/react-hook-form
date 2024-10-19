@@ -1,11 +1,12 @@
-import * as React from 'react';
+import React from 'react';
 import {
-  act as actComponent,
+  act,
   fireEvent,
   render,
+  renderHook,
   screen,
+  waitFor,
 } from '@testing-library/react';
-import { act, renderHook } from '@testing-library/react-hooks';
 
 import { useForm } from '../../useForm';
 
@@ -29,6 +30,7 @@ describe('clearErrors', () => {
     const { result } = renderHook(() =>
       useForm<{ input: { nested: string } }>(),
     );
+    result.current.formState.errors;
     act(() =>
       result.current.setError('input.nested', {
         type: 'test',
@@ -66,19 +68,23 @@ describe('clearErrors', () => {
       );
     };
 
-    await actComponent(async () => {
-      render(<Component />);
-    });
+    render(<Component />);
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'submit' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
 
-    expect(currentErrors).toMatchSnapshot();
+    await waitFor(() =>
+      expect(currentErrors).toEqual({
+        test: {
+          data: {
+            message: '',
+            ref: screen.getByRole('textbox'),
+            type: 'required',
+          },
+        },
+      }),
+    );
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'clear' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'clear' }));
 
     expect(currentErrors).toEqual({});
   });
@@ -92,6 +98,8 @@ describe('clearErrors', () => {
         nest: { data: string; data1: string };
       }>(),
     );
+
+    result.current.formState.errors;
 
     const error = {
       type: 'test',
@@ -162,6 +170,8 @@ describe('clearErrors', () => {
       useForm<{ input: string; input1: string; input2: string }>(),
     );
 
+    result.current.formState.errors;
+
     const error = {
       type: 'test',
       message: 'message',
@@ -212,5 +222,65 @@ describe('clearErrors', () => {
 
     await act(async () => await result.current.handleSubmit(submit)());
     expect(submit).toBeCalled();
+  });
+
+  it('should update isValid to true with setError', async () => {
+    const App = () => {
+      const {
+        formState: { isValid },
+        setError,
+        clearErrors,
+      } = useForm({
+        mode: 'onChange',
+      });
+
+      return (
+        <div>
+          <button
+            onClick={() => {
+              setError('test', { type: 'test' });
+            }}
+          >
+            setError
+          </button>
+
+          <button
+            onClick={() => {
+              clearErrors();
+            }}
+          >
+            clearError
+          </button>
+          {isValid ? 'yes' : 'no'}
+        </div>
+      );
+    };
+
+    render(<App />);
+
+    expect(await screen.findByText('yes')).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'setError' }));
+
+    expect(await screen.findByText('no')).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'clearError' }));
+
+    expect(await screen.findByText('no')).toBeVisible();
+  });
+
+  it('should be able to clear root error', () => {
+    const App = () => {
+      const { clearErrors } = useForm();
+
+      React.useEffect(() => {
+        clearErrors('root');
+        clearErrors('root.other');
+      }, [clearErrors]);
+
+      return null;
+    };
+
+    render(<App />);
   });
 });

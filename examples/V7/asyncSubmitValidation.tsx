@@ -1,5 +1,3 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
 import { useForm } from 'react-hook-form';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -11,7 +9,7 @@ export default function App() {
     formState: { errors },
     setError,
   } = useForm();
-  
+
   const onSubmit = async (data) => {
     await sleep(2000);
     if (data.username === 'bill') {
@@ -29,17 +27,18 @@ export default function App() {
       <form onSubmit={handleSubmit(onSubmit)}>
         <div>
           <label htmlFor="username">User Name</label>
-          <input placeholder="Bill" {...register('username')} />
+          <input id="username" placeholder="Bill" {...register('username')} />
         </div>
 
         <div>
           <label htmlFor="lastName">Last Name</label>
-          <input placeholder="Luo" {...register('lastName')} />
+          <input id="lastName" placeholder="Luo" {...register('lastName')} />
         </div>
 
         <div>
           <label htmlFor="email">Email</label>
           <input
+            id="email"
             placeholder="bluebill1049@hotmail.com"
             type="text"
             {...register('email')}

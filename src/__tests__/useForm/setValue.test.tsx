@@ -1,17 +1,24 @@
-import * as React from 'react';
+import React from 'react';
 import {
-  act as actComponent,
+  act,
   fireEvent,
   render,
+  renderHook,
   screen,
+  waitFor,
 } from '@testing-library/react';
-import { act, renderHook } from '@testing-library/react-hooks';
 
 import { VALIDATION_MODE } from '../../constants';
-import { NestedValue } from '../../types';
+import { Controller } from '../../controller';
+import { Control } from '../../types';
+import { useFieldArray } from '../../useFieldArray';
 import { useForm } from '../../useForm';
 import get from '../../utils/get';
 import isFunction from '../../utils/isFunction';
+import noop from '../../utils/noop';
+import sleep from '../../utils/sleep';
+
+jest.useFakeTimers();
 
 describe('setValue', () => {
   it('should not setValue for unmounted state with shouldUnregister', () => {
@@ -40,7 +47,9 @@ describe('setValue', () => {
 
     expect(elm).not.toHaveValue();
 
-    result.current.setValue('test', undefined);
+    act(() => {
+      result.current.unregister('test');
+    });
 
     expect(elm).not.toHaveValue();
   });
@@ -58,8 +67,8 @@ describe('setValue', () => {
           test: '1',
         });
       })({
-        preventDefault: () => {},
-        persist: () => {},
+        preventDefault: noop,
+        persist: noop,
       } as React.SyntheticEvent);
     });
   });
@@ -69,14 +78,12 @@ describe('setValue', () => {
 
     result.current.register('test');
 
-    const blob = new Blob([''], { type: 'image/png', lastModified: 1 } as any);
-    const file = blob as File;
-    const fileList = ({
+    const file = new File([''], '', { type: 'image/png', lastModified: 1 });
+    const fileList = {
       0: file,
       1: file,
       length: 2,
-      item: () => file,
-    } as any) as FileList;
+    } as unknown as FileList;
 
     act(() => result.current.setValue('test', fileList));
 
@@ -86,8 +93,8 @@ describe('setValue', () => {
           test: fileList,
         });
       })({
-        preventDefault: () => {},
-        persist: () => {},
+        preventDefault: noop,
+        persist: noop,
       } as React.SyntheticEvent);
     });
   });
@@ -124,8 +131,8 @@ describe('setValue', () => {
           test: ['1'],
         });
       })({
-        preventDefault: () => {},
-        persist: () => {},
+        preventDefault: noop,
+        persist: noop,
       } as React.SyntheticEvent);
     });
   });
@@ -143,8 +150,83 @@ describe('setValue', () => {
           test: '1',
         });
       })({
-        preventDefault: () => {},
-        persist: () => {},
+        preventDefault: noop,
+        persist: noop,
+      } as React.SyntheticEvent);
+    });
+  });
+
+  it('should set value of multiple checkbox input correctly as a child', async () => {
+    const { result } = renderHook(() =>
+      useForm<{ parent: { test: string[] } }>(),
+    );
+
+    const { ref } = result.current.register('parent.test');
+
+    const elm = document.createElement('input');
+    elm.type = 'checkbox';
+    elm.name = 'test';
+    elm.value = '2';
+
+    document.body.append(elm);
+    isFunction(ref) && ref(elm);
+
+    const { ref: ref1 } = result.current.register('parent.test');
+
+    const elm1 = document.createElement('input');
+    elm1.type = 'checkbox';
+    elm1.name = 'test';
+    elm1.value = '1';
+
+    document.body.append(elm1);
+
+    isFunction(ref1) && ref1(elm1);
+
+    result.current.setValue('parent', { test: ['1'] });
+    expect(elm1).toBeChecked();
+
+    await act(async () => {
+      await result.current.handleSubmit((data) => {
+        expect(data).toEqual({
+          parent: {
+            test: ['1'],
+          },
+        });
+      })({
+        preventDefault: noop,
+        persist: noop,
+      } as React.SyntheticEvent);
+    });
+  });
+
+  it('should set value of single checkbox input correctly as a child', async () => {
+    const { result } = renderHook(() =>
+      useForm<{ parent: { test: string } }>(),
+    );
+
+    const { ref } = result.current.register('parent.test');
+
+    const elm = document.createElement('input');
+    elm.type = 'checkbox';
+    elm.name = 'test';
+    elm.value = '1';
+
+    document.body.append(elm);
+    isFunction(ref) && ref(elm);
+
+    result.current.setValue('parent', { test: '1' });
+    expect(elm).toBeChecked();
+
+    await act(async () => {
+      await result.current.handleSubmit((data) => {
+        expect(data).toEqual({
+          parent: {
+            test: '1',
+          },
+        });
+      })({
+        preventDefault: noop,
+        persist: noop,
       } as React.SyntheticEvent);
     });
   });
@@ -167,10 +249,53 @@ describe('setValue', () => {
           test: ['1'],
         });
       })({
-        preventDefault: () => {},
-        persist: () => {},
+        preventDefault: noop,
+        persist: noop,
       } as React.SyntheticEvent);
     });
+  });
+
+  it('should update nested controlled input', () => {
+    function App() {
+      const { setValue, control } = useForm({
+        defaultValues: {
+          test: {
+            deep: {
+              field: 'test',
+            },
+          },
+        },
+      });
+
+      return (
+        <form>
+          <Controller
+            name="test.deep.field"
+            control={control}
+            render={({ field }) => <input {...field} />}
+          />
+
+          <button
+            type="button"
+            onClick={() => {
+              setValue('test.deep', {
+                field: 'updateValue',
+              });
+            }}
+          >
+            setValue
+          </button>
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect((screen.getByRole('textbox') as HTMLInputElement).value).toEqual(
+      'updateValue',
+    );
   });
 
   it('should set object array value', () => {
@@ -232,17 +357,15 @@ describe('setValue', () => {
   it('should set nested value correctly ', () => {
     const { result } = renderHook(() =>
       useForm<{
-        test1: NestedValue<string[]>;
-        test2: NestedValue<{
+        test1: string[];
+        test2: {
           key1: string;
           key2: number;
-        }>;
-        test3: NestedValue<
-          {
-            key1: string;
-            key2: number;
-          }[]
-        >;
+        };
+        test3: {
+          key1: string;
+          key2: number;
+        }[];
       }>(),
     );
 
@@ -259,22 +382,23 @@ describe('setValue', () => {
       ]);
     });
 
-    expect(result.current.control.fieldsRef.current['test1']).toEqual({
+    expect(result.current.control._fields['test1']).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test1', value: ['1', '2', '3'] },
         name: 'test1',
-        value: ['1', '2', '3'],
       },
     });
-    expect(result.current.control.fieldsRef.current['test2']).toEqual({
+    expect(result.current.control._fields['test2']).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test2', value: { key1: '1', key2: 2 } },
         name: 'test2',
-        value: { key1: '1', key2: 2 },
       },
     });
-    expect(result.current.control.fieldsRef.current['test3']).toEqual({
+    expect(result.current.control._fields['test3']).toEqual({
       _f: {
+        mount: true,
         ref: {
           name: 'test3',
           value: [
@@ -283,10 +407,6 @@ describe('setValue', () => {
           ],
         },
         name: 'test3',
-        value: [
-          { key1: '1', key2: 2 },
-          { key1: '3', key2: 4 },
-        ],
       },
     });
   });
@@ -308,25 +428,25 @@ describe('setValue', () => {
 
     act(() => result.current.setValue('test', ['1', '2', '3']));
 
-    expect(get(result.current.control.fieldsRef.current, 'test.0')).toEqual({
+    expect(get(result.current.control._fields, 'test.0')).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test.0', value: '1' },
         name: 'test.0',
-        value: '1',
       },
     });
-    expect(get(result.current.control.fieldsRef.current, 'test.1')).toEqual({
+    expect(get(result.current.control._fields, 'test.1')).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test.1', value: '2' },
         name: 'test.1',
-        value: '2',
       },
     });
-    expect(get(result.current.control.fieldsRef.current, 'test.2')).toEqual({
+    expect(get(result.current.control._fields, 'test.2')).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test.2', value: '3' },
         name: 'test.2',
-        value: '3',
       },
     });
   });
@@ -352,31 +472,25 @@ describe('setValue', () => {
       ]),
     );
 
-    expect(
-      get(result.current.control.fieldsRef.current, 'test.0.test'),
-    ).toEqual({
+    expect(get(result.current.control._fields, 'test.0.test')).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test.0.test', value: '1' },
         name: 'test.0.test',
-        value: '1',
       },
     });
-    expect(
-      get(result.current.control.fieldsRef.current, 'test.1.test'),
-    ).toEqual({
+    expect(get(result.current.control._fields, 'test.1.test')).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test.1.test', value: '2' },
         name: 'test.1.test',
-        value: '2',
       },
     });
-    expect(
-      get(result.current.control.fieldsRef.current, 'test.2.test'),
-    ).toEqual({
+    expect(get(result.current.control._fields, 'test.2.test')).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test.2.test', value: '3' },
         name: 'test.2.test',
-        value: '3',
       },
     });
   });
@@ -403,38 +517,26 @@ describe('setValue', () => {
     act(() =>
       result.current.setValue('test', { bill: '1', luo: '2', test: '3' }),
     );
-    expect(get(result.current.control.fieldsRef.current, 'test.bill')).toEqual({
+    expect(get(result.current.control._fields, 'test.bill')).toEqual({
       _f: {
         ref: { name: 'test.bill', value: '1' },
+        mount: true,
         name: 'test.bill',
-        value: '1',
       },
     });
-    expect(get(result.current.control.fieldsRef.current, 'test.luo')).toEqual({
+    expect(get(result.current.control._fields, 'test.luo')).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test.luo', value: '2' },
         name: 'test.luo',
-        value: '2',
       },
     });
-    expect(get(result.current.control.fieldsRef.current, 'test.test')).toEqual({
+    expect(get(result.current.control._fields, 'test.test')).toEqual({
       _f: {
+        mount: true,
         ref: { name: 'test.test', value: '3' },
         name: 'test.test',
-        value: '3',
       },
-    });
-  });
-
-  it('should work if field is not registered', () => {
-    const { result } = renderHook(() => useForm());
-
-    act(() => {
-      result.current.setValue('test', '1');
-    });
-
-    expect(result.current.control.fieldsRef.current['test']).toEqual({
-      _f: { name: 'test', ref: { name: 'test', value: '1' }, value: '1' },
     });
   });
 
@@ -452,35 +554,15 @@ describe('setValue', () => {
       });
     });
 
-    expect(result.current.control.fieldsRef.current['test']).toEqual({
+    expect(result.current.control._fields['test']).toEqual({
       test: {
         _f: {
+          mount: true,
           name: 'test.test',
           ref: {
             name: 'test.test',
             value: 'test',
           },
-          value: 'test',
-        },
-      },
-      test1: {
-        _f: {
-          name: 'test.test1',
-          ref: {
-            name: 'test.test1',
-            value: 'test1',
-          },
-          value: 'test1',
-        },
-      },
-      test2: {
-        _f: {
-          name: 'test.test2',
-          ref: {
-            name: 'test.test2',
-            value: 'test2',
-          },
-          value: 'test2',
         },
       },
     });
@@ -520,6 +602,7 @@ describe('setValue', () => {
       });
 
       result.current.formState.dirtyFields;
+      result.current.formState.errors;
 
       await act(async () =>
         result.current.setValue('test', 'abc', {
@@ -528,6 +611,56 @@ describe('setValue', () => {
       );
 
       expect(result.current.formState.errors?.test?.message).toBe('min');
+    });
+
+    it('should validate input correctly with existing error', async () => {
+      const Component = () => {
+        const {
+          register,
+          setError,
+          setValue,
+          formState: { errors },
+        } = useForm({
+          defaultValues: {
+            test: '',
+          },
+        });
+
+        return (
+          <>
+            <input {...register('test', { required: true })} />
+            <button
+              onClick={() => {
+                setError('test', { type: 'somethingWrong', message: 'test' });
+              }}
+            >
+              setError
+            </button>
+            <button
+              onClick={() => {
+                setValue('test', 'bill', {
+                  shouldValidate: true,
+                });
+              }}
+            >
+              update
+            </button>
+            <p>{errors?.test?.message}</p>
+          </>
+        );
+      };
+
+      render(<Component />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'setError' }));
+
+      expect(await screen.findByText('test')).toBeVisible();
+
+      fireEvent.click(screen.getByRole('button', { name: 'update' }));
+
+      await waitFor(() =>
+        expect(screen.queryByText('test')).not.toBeInTheDocument(),
+      );
     });
 
     it('should not be called trigger method if options is empty', async () => {
@@ -562,6 +695,8 @@ describe('setValue', () => {
       result.current.register('test.0', rules);
       result.current.register('test.1', rules);
       result.current.register('test.2', rules);
+
+      result.current.formState.errors;
 
       await act(async () =>
         result.current.setValue('test', ['abc1', 'abc2', 'abc3'], {
@@ -606,6 +741,7 @@ describe('setValue', () => {
 
         result.current.formState[property as 'dirtyFields' | 'isDirty'];
         result.current.formState.isDirty;
+        result.current.formState.dirtyFields;
 
         result.current.register('test');
 
@@ -638,6 +774,7 @@ describe('setValue', () => {
 
         result.current.formState[property as 'isDirty' | 'dirtyFields'];
         result.current.formState.isDirty;
+        result.current.formState.dirtyFields;
 
         result.current.register('test.0');
         result.current.register('test.1');
@@ -688,6 +825,7 @@ describe('setValue', () => {
         );
         result.current.formState[property as 'dirtyFields' | 'isDirty'];
         result.current.formState.isDirty;
+        result.current.formState.dirtyFields;
 
         result.current.register('test');
 
@@ -708,6 +846,7 @@ describe('setValue', () => {
         );
         result.current.formState[property as 'isDirty' | 'dirtyFields'];
         result.current.formState.isDirty;
+        result.current.formState.dirtyFields;
 
         result.current.register('test');
 
@@ -726,8 +865,82 @@ describe('setValue', () => {
     );
   });
 
+  describe('with touched', () => {
+    it('should update touched with shouldTouched config', () => {
+      const App = () => {
+        const {
+          setValue,
+          register,
+          formState: { touchedFields },
+        } = useForm();
+
+        return (
+          <>
+            <p>{Object.keys(touchedFields).map((field: string) => field)}</p>
+            <input {...register('test')} />
+            <button
+              onClick={() => {
+                setValue('test', 'data', { shouldTouch: true });
+              }}
+            >
+              Test
+            </button>
+          </>
+        );
+      };
+      render(<App />);
+
+      fireEvent.click(screen.getByRole('button'));
+
+      expect(screen.getByText('test')).toBeVisible();
+    });
+  });
+
+  describe('with strict mode', () => {
+    it('should be able to set input value async', async () => {
+      function App() {
+        const { control, setValue } = useForm();
+
+        React.useEffect(() => {
+          sleep(1000);
+          setValue('name', 'test');
+        }, [setValue]);
+
+        return (
+          <div className="App">
+            <form>
+              <Controller
+                defaultValue=""
+                name="name"
+                control={control}
+                render={({ field }) => {
+                  return (
+                    <div>
+                      <input />
+                      <p>{field.value}</p>
+                    </div>
+                  );
+                }}
+              />
+            </form>
+          </div>
+        );
+      }
+
+      render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>,
+      );
+
+      jest.advanceTimersByTime(10000);
+
+      expect(await screen.findByText('test')).toBeVisible();
+    });
+  });
+
   it('should set hidden input value correctly and reflect on the submission data', async () => {
-    let submitData = undefined;
+    let submitData: Record<string, string> | undefined = undefined;
 
     const Component = () => {
       const { register, handleSubmit, setValue } = useForm<{
@@ -757,17 +970,15 @@ describe('setValue', () => {
 
     render(<Component />);
 
-    await actComponent(async () => {
-      await fireEvent.click(screen.getByRole('button', { name: 'change' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'change' }));
 
-    await actComponent(async () => {
-      await fireEvent.click(screen.getByRole('button', { name: 'submit' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
 
-    expect(submitData).toEqual({
-      test: 'changed',
-    });
+    await waitFor(() =>
+      expect(submitData).toEqual({
+        test: 'changed',
+      }),
+    );
   });
 
   it('should validate the input and return correct isValid formState', async () => {
@@ -801,5 +1012,457 @@ describe('setValue', () => {
     });
 
     expect(result.current.formState.isValid).toBeTruthy();
+  });
+
+  it('should setValue with valueAs', async () => {
+    let result: Record<string, string>;
+
+    function App() {
+      const { register, handleSubmit, setValue } = useForm();
+
+      React.useEffect(() => {
+        setValue('setStringDate', '2021-04-23');
+      }, [setValue]);
+
+      return (
+        <form
+          onSubmit={handleSubmit((data) => {
+            result = data;
+          })}
+        >
+          <input
+            type="date"
+            {...register('setStringDate', { valueAsDate: true })}
+          />
+          <input type="submit" />
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() =>
+      expect(result).toEqual({
+        setStringDate: new Date('2021-04-23'),
+      }),
+    );
+  });
+
+  it('should set value for field array name correctly', () => {
+    const inputId = 'name';
+
+    const App = () => {
+      const { control, setValue } = useForm<{
+        names: { name: string; id?: string }[];
+      }>();
+
+      const { fields } = useFieldArray({ control, name: 'names' });
+
+      React.useEffect(() => {
+        setValue('names', [{ name: 'initial value' }]);
+      }, [setValue]);
+
+      const onChangeValue = () => {
+        setValue('names.0', { name: 'updated value', id: 'test' });
+      };
+
+      return (
+        <>
+          {fields.map((item, index) => (
+            <Controller
+              key={item.id}
+              control={control}
+              name={`names.${index}.name` as const}
+              render={({ field }) => <input data-testid={inputId} {...field} />}
+            />
+          ))}
+          <button onClick={onChangeValue}>Update</button>
+        </>
+      );
+    };
+
+    render(<App />);
+
+    expect(screen.getByTestId(inputId)).toHaveValue('initial value');
+
+    fireEvent.click(screen.getByText('Update'));
+
+    expect(screen.getByTestId(inputId)).toHaveValue('updated value');
+  });
+
+  it('should set field array correctly without affect the parent field array', async () => {
+    const fieldsValue: unknown[] = [];
+    type FormValues = {
+      test: { name: string; nestedArray: { name: string }[] }[];
+    };
+
+    const Child = ({
+      control,
+      index,
+    }: {
+      control: Control<FormValues>;
+      index: number;
+    }) => {
+      useFieldArray({
+        control,
+        name: `test.${index}.nestedArray`,
+      });
+
+      return null;
+    };
+
+    const App = () => {
+      const { setValue, control } = useForm<FormValues>({
+        defaultValues: {
+          test: [{ name: 'bill', nestedArray: [] }],
+        },
+      });
+      const { fields } = useFieldArray({
+        control,
+        name: 'test',
+      });
+
+      fieldsValue.push(fields);
+
+      return (
+        <div>
+          {fields.map((field, index) => (
+            <Child key={field.id} control={control} index={index} />
+          ))}
+          <button
+            onClick={() => {
+              setValue('test.0.nestedArray' as `test.0.nestedArray`, [
+                { name: 'append' },
+              ]);
+            }}
+          >
+            setValue
+          </button>
+        </div>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(fieldsValue.length).toEqual(1);
+  });
+
+  it('should not register deeply nested inputs', () => {
+    let fields: unknown;
+    let data: unknown;
+
+    const App = () => {
+      const { setValue, control, getValues } = useForm();
+      useFieldArray({
+        control,
+        name: 'test',
+      });
+      const [, setShow] = React.useState(false);
+      fields = control._fields;
+
+      return (
+        <>
+          <button
+            onClick={() => {
+              setValue('test', [
+                {
+                  name: 'append',
+                  nestedArray: [{ field1: 'append', field2: 'append' }],
+                },
+              ]);
+              setShow(true);
+            }}
+          >
+            setValue
+          </button>
+          <button
+            onClick={() => {
+              data = getValues();
+            }}
+          >
+            getValues
+          </button>
+        </>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'setValue' }));
+
+    expect(fields).toEqual({});
+
+    fireEvent.click(screen.getByRole('button', { name: 'getValues' }));
+
+    expect(data).toEqual({
+      test: [
+        {
+          name: 'append',
+          nestedArray: [
+            {
+              field1: 'append',
+              field2: 'append',
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  describe('when set field to null', () => {
+    it('should be able to set correctly with register', () => {
+      let result: unknown;
+
+      type FormData = {
+        user: { name: string } | null;
+      };
+
+      function App() {
+        const { setValue, watch, register } = useForm<FormData>({
+          defaultValues: {
+            user: {
+              name: 'John Doe',
+            },
+          },
+        });
+
+        result = watch();
+
+        register('user');
+
+        return (
+          <div>
+            <button onClick={() => setValue('user', null)}>
+              Set user to null
+            </button>
+          </div>
+        );
+      }
+
+      render(<App />);
+
+      fireEvent.click(screen.getByRole('button'));
+
+      expect(result).toEqual({
+        user: null,
+      });
+    });
+
+    it('should be able to set correctly without register', () => {
+      let result: unknown;
+
+      type FormData = {
+        user: { name: string } | null;
+      };
+
+      function App() {
+        const { setValue, watch } = useForm<FormData>({
+          defaultValues: {
+            user: {
+              name: 'John Doe',
+            },
+          },
+        });
+
+        result = watch();
+
+        return (
+          <div>
+            <button onClick={() => setValue('user', null)}>
+              Set user to null
+            </button>
+          </div>
+        );
+      }
+
+      render(<App />);
+
+      fireEvent.click(screen.getByRole('button'));
+
+      expect(result).toEqual({
+        user: null,
+      });
+    });
+  });
+
+  it('should only be able to update value of array which is not registered', async () => {
+    const App = () => {
+      const { setValue, watch } = useForm({
+        defaultValues: {
+          test: ['1', '2', '3'],
+        },
+      });
+
+      React.useEffect(() => {
+        setValue('test', ['2', '2']);
+      }, [setValue]);
+
+      const result = watch('test');
+
+      return <p>{JSON.stringify(result)}</p>;
+    };
+
+    render(<App />);
+
+    expect(await screen.findByText('["2","2"]')).toBeVisible();
+  });
+
+  it('should only be able to update value of object which is not registered', async () => {
+    const App = () => {
+      const { setValue, watch } = useForm<{
+        test: {
+          data: string;
+          data1: string;
+          data2: string;
+        };
+      }>({
+        defaultValues: {
+          test: {
+            data: '1',
+            data1: '2',
+          },
+        },
+      });
+
+      React.useEffect(() => {
+        setValue('test', {
+          data: '2',
+          data1: '2',
+          data2: '3',
+        });
+      }, [setValue]);
+
+      const result = watch('test');
+
+      return <p>{JSON.stringify(result)}</p>;
+    };
+
+    render(<App />);
+
+    expect(
+      await screen.findByText('{"data":"2","data1":"2","data2":"3"}'),
+    ).toBeVisible();
+  });
+
+  it('should update nested object which contain date object without register', () => {
+    const watchedValue: unknown[] = [];
+    const defaultValues = {
+      userData: {
+        userId: 'abc',
+        date: new Date('2021-06-15'),
+      },
+    };
+
+    function App() {
+      const { setValue, watch } = useForm({
+        defaultValues,
+      });
+
+      const setUserData = () => {
+        setValue('userData', {
+          userId: '1234',
+          date: new Date('2021-12-17'),
+        });
+      };
+
+      watchedValue.push(watch('userData'));
+
+      return (
+        <div>
+          <form>
+            <button type="button" onClick={() => setUserData()}>
+              Update
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(watchedValue).toEqual([
+      {
+        date: new Date('2021-06-15T00:00:00.000Z'),
+        userId: 'abc',
+      },
+      {
+        date: new Date('2021-12-17T00:00:00.000Z'),
+        userId: '1234',
+      },
+    ]);
+  });
+
+  it('should update isDirty even input is not registered', async () => {
+    const App = () => {
+      const {
+        setValue,
+        formState: { isDirty },
+      } = useForm({
+        defaultValues: {
+          test: '',
+        },
+      });
+
+      React.useEffect(() => {
+        setValue('test', '1234', { shouldDirty: true });
+      }, [setValue]);
+
+      return <p>{isDirty ? 'dirty' : 'not'}</p>;
+    };
+
+    render(<App />);
+
+    expect(await screen.findByText('dirty')).toBeVisible();
+  });
+
+  it('should update both dirty and touched state', () => {
+    const App = () => {
+      const {
+        register,
+        formState: { dirtyFields, touchedFields },
+        setValue,
+      } = useForm({
+        defaultValues: {
+          firstName: '',
+        },
+      });
+
+      return (
+        <form>
+          <label>First Name</label>
+          <input type="text" {...register('firstName')} />
+          {dirtyFields.firstName && <p>dirty</p>}
+          {touchedFields.firstName && <p>touched</p>}
+
+          <button
+            type="button"
+            onClick={() =>
+              setValue('firstName', 'test', {
+                shouldValidate: true,
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+            }
+          >
+            setValue
+          </button>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(screen.getByText('dirty')).toBeVisible();
+    expect(screen.getByText('touched')).toBeVisible();
   });
 });

@@ -1,29 +1,39 @@
-import * as React from 'react';
+import React from 'react';
 import {
-  act as actComponent,
+  act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from '@testing-library/react';
-import { act, renderHook } from '@testing-library/react-hooks';
 
 import { VALIDATION_MODE } from '../../constants';
 import { Controller } from '../../controller';
 import { Control, DeepMap, FieldError } from '../../types';
 import { useFieldArray } from '../../useFieldArray';
 import { useForm } from '../../useForm';
-import { mockGenerateId } from '../useFieldArray.test';
+import noop from '../../utils/noop';
+
+jest.useFakeTimers();
+
+let i = 0;
+
+jest.mock('../../logic/generateId', () => () => String(i++));
 
 describe('remove', () => {
   beforeEach(() => {
-    mockGenerateId();
+    i = 0;
   });
 
   it('should update isDirty formState when item removed', () => {
     let formState: any;
     const Component = () => {
-      const { register, control, formState: tempFormState } = useForm({
+      const {
+        register,
+        control,
+        formState: tempFormState,
+      } = useForm({
         defaultValues: {
           test: [{ name: 'default' }],
         },
@@ -39,11 +49,8 @@ describe('remove', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <div key={i.toString()}>
-              <input
-                {...register(`test.${i}.name` as const)}
-                defaultValue={field.name}
-              />
+            <div key={field.id}>
+              <input {...register(`test.${i}.name` as const)} />
               <button type={'button'} onClick={() => remove(i)}>
                 remove
               </button>
@@ -80,7 +87,11 @@ describe('remove', () => {
   it('should update isValid formState when item removed', async () => {
     let formState: any;
     const Component = () => {
-      const { register, control, formState: tempFormState } = useForm({
+      const {
+        register,
+        control,
+        formState: tempFormState,
+      } = useForm({
         mode: 'onChange',
         defaultValues: {
           test: [{ name: 'default' }],
@@ -98,10 +109,9 @@ describe('remove', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <div key={i.toString()}>
+            <div key={field.id}>
               <input
                 {...register(`test.${i}.name` as const, { required: true })}
-                defaultValue={field.name}
               />
               <button type={'button'} onClick={() => remove(i)}>
                 remove
@@ -119,25 +129,21 @@ describe('remove', () => {
           >
             append
           </button>
+
+          <p>{formState.isValid ? 'isValid' : 'notValid'}</p>
         </form>
       );
     };
 
     render(<Component />);
 
-    await actComponent(async () => {
-      await fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
 
-    expect(formState.isValid).toBeFalsy();
+    expect(await screen.findByText('notValid')).toBeVisible();
 
-    await actComponent(async () => {
-      await fireEvent.click(
-        screen.getAllByRole('button', { name: /remove/i })[1],
-      );
-    });
+    fireEvent.click(screen.getAllByRole('button', { name: /remove/i })[1]);
 
-    expect(formState.isValid).toBeTruthy();
+    expect(await screen.findByText('isValid')).toBeVisible();
   });
 
   it('should remove field according index', () => {
@@ -320,11 +326,10 @@ describe('remove', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'remove all' }));
 
-    expect(touched).toEqual({});
+    expect(touched).toEqual({ test: [] });
   });
 
   it('should remove specific field if isValid is true', async () => {
-    let isValid = false;
     const Component = () => {
       const { register, formState, control } = useForm({
         mode: VALIDATION_MODE.onChange,
@@ -333,7 +338,8 @@ describe('remove', () => {
         control,
         name: 'test',
       });
-      isValid = formState.isValid;
+
+      formState.isValid;
 
       return (
         <form>
@@ -349,57 +355,42 @@ describe('remove', () => {
           <button type="button" onClick={() => remove(1)}>
             remove
           </button>
+          <p>{formState.isValid ? 'valid' : 'notValid'}</p>
         </form>
       );
     };
 
     render(<Component />);
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    expect(await screen.findByText('notValid')).toBeVisible();
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
 
-    expect(isValid).toBeFalsy();
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
 
     const inputs = screen.getAllByRole('textbox');
 
-    await actComponent(async () => {
-      fireEvent.input(inputs[0], {
-        target: { value: 'test' },
-      });
+    fireEvent.input(inputs[0], {
+      target: { value: 'test' },
     });
 
-    await actComponent(async () => {
-      fireEvent.input(inputs[2], {
-        target: { value: 'test' },
-      });
+    fireEvent.input(inputs[2], {
+      target: { value: 'test' },
     });
 
-    await actComponent(async () => {
-      fireEvent.input(inputs[3], {
-        target: { value: 'test' },
-      });
+    fireEvent.input(inputs[3], {
+      target: { value: 'test' },
     });
 
-    expect(isValid).toBeFalsy();
+    expect(await screen.findByText('notValid')).toBeVisible();
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'remove' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'remove' }));
 
-    expect(isValid).toBeTruthy();
+    expect(await screen.findByText('valid')).toBeVisible();
   });
 
   it('should remove all field if isValid is true', async () => {
@@ -434,25 +425,19 @@ describe('remove', () => {
 
     render(<Component />);
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
+    await waitFor(() => expect(isValid).toBeFalsy());
+    expect(screen.getAllByRole('textbox')).toHaveLength(1);
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
+    expect(screen.getAllByRole('textbox')).toHaveLength(2);
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
+    await waitFor(() => expect(isValid).toBeFalsy());
+    expect(screen.getAllByRole('textbox')).toHaveLength(3);
 
-    expect(isValid).toBeFalsy();
-
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'remove' }));
-    });
-
-    expect(isValid).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'remove' }));
+    await waitFor(() => expect(isValid).toBe(true));
   });
 
   it('should remove error', async () => {
@@ -471,7 +456,7 @@ describe('remove', () => {
       errors = tempErrors;
 
       return (
-        <form onSubmit={handleSubmit(() => {})}>
+        <form onSubmit={handleSubmit(noop)}>
           {fields.map((field, i) => (
             <input
               key={field.id}
@@ -495,16 +480,16 @@ describe('remove', () => {
     render(<Component />);
 
     fireEvent.click(screen.getByRole('button', { name: /append/i }));
-    fireEvent.click(screen.getByRole('button', { name: /append/i }));
+
     fireEvent.click(screen.getByRole('button', { name: /append/i }));
 
-    await actComponent(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /submit/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /append/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
 
     fireEvent.click(screen.getByRole('button', { name: 'remove' }));
 
-    expect(errors.test).toHaveLength(2);
+    await waitFor(() => expect(errors.test).toHaveLength(2));
 
     fireEvent.click(screen.getByRole('button', { name: 'remove all' }));
 
@@ -560,10 +545,15 @@ describe('remove', () => {
                     {errors.test[index].nested[i].test.message}
                   </span>
                 )}
-              <button onClick={() => remove(i)}>nested delete</button>
+              <button type="button" onClick={() => remove(i)}>
+                nested delete
+              </button>
             </div>
           ))}
-          <button onClick={() => append({ test: 'test', key: mockKey++ })}>
+          <button
+            type="button"
+            onClick={() => append({ test: 'test', key: mockKey++ })}
+          >
             nested append
           </button>
         </fieldset>
@@ -572,7 +562,7 @@ describe('remove', () => {
 
     const Component = () => {
       const {
-        formState: { errors },
+        formState: { errors, isValid },
         handleSubmit,
         control,
       } = useForm<FormValues>({
@@ -583,41 +573,35 @@ describe('remove', () => {
       const { fields } = useFieldArray({ name: 'test', control });
 
       return (
-        <form onSubmit={handleSubmit(callback)}>
-          {fields.map((_, i) => (
-            <Nested
-              key={i.toString()}
-              errors={errors}
-              control={control}
-              index={i}
-            />
-          ))}
-          <button>submit</button>
-        </form>
+        <>
+          <p>Valid: {isValid.toString()}</p>
+          <form onSubmit={handleSubmit(callback)}>
+            {fields.map((_, i) => (
+              <Nested
+                key={i.toString()}
+                errors={errors}
+                control={control}
+                index={i}
+              />
+            ))}
+            <button>submit</button>
+          </form>
+        </>
       );
     };
 
     render(<Component />);
 
-    await actComponent(async () => {
-      await fireEvent.click(screen.getByRole('button', { name: /submit/i }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+    expect(await screen.findByTestId('nested-error')).toBeVisible();
 
-    expect(screen.queryByTestId('nested-error')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /nested delete/i }));
+    await waitFor(() =>
+      expect(screen.queryByTestId('nested-error')).not.toBeInTheDocument(),
+    );
+    expect(await screen.findByText('Valid: true')).toBeVisible();
 
-    await actComponent(async () => {
-      await fireEvent.click(
-        screen.getByRole('button', { name: /nested delete/i }),
-      );
-    });
-
-    expect(screen.queryByTestId('nested-error')).not.toBeInTheDocument();
-
-    await actComponent(async () => {
-      await fireEvent.click(
-        screen.getByRole('button', { name: /nested append/i }),
-      );
-    });
+    fireEvent.click(screen.getByRole('button', { name: /nested append/i }));
 
     expect(screen.queryByTestId('nested-error')).not.toBeInTheDocument();
   });
@@ -639,11 +623,7 @@ describe('remove', () => {
       return (
         <form>
           {fields.map((field, i) => (
-            <input
-              key={field.id}
-              defaultValue={field.value}
-              {...register(`test.${i}.value` as const)}
-            />
+            <input key={field.id} {...register(`test.${i}.value` as const)} />
           ))}
           <button type="button" onClick={() => append({ value: '' })}>
             append
@@ -693,10 +673,7 @@ describe('remove', () => {
         <div>
           {fields.map((field, i) => (
             <div key={`${field.id}`}>
-              <input
-                {...register(`test.${i}.value` as const)}
-                defaultValue={field.value}
-              />
+              <input {...register(`test.${i}.value` as const)} />
             </div>
           ))}
           <button onClick={() => append({ value: '' })}>append</button>
@@ -766,7 +743,7 @@ describe('remove', () => {
 
     expect(result.current.formState.isDirty).toBeTruthy();
     expect(result.current.formState.dirtyFields).toEqual({
-      test: { data: [undefined, { value: true }] },
+      test: { data: [{ value: false }, { value: true }] },
     });
 
     act(() => {
@@ -774,7 +751,9 @@ describe('remove', () => {
     });
 
     expect(result.current.formState.isDirty).toBeFalsy();
-    expect(result.current.formState.dirtyFields).toEqual({});
+    expect(result.current.formState.dirtyFields).toEqual({
+      test: { data: [{ value: false }] },
+    });
   });
 
   it('should remove Controller by index without error', () => {
@@ -794,7 +773,7 @@ describe('remove', () => {
       });
 
       return (
-        <form onSubmit={handleSubmit(() => {})}>
+        <form onSubmit={handleSubmit(noop)}>
           <ul>
             {fields.map((item, index) => {
               return (
@@ -803,7 +782,6 @@ describe('remove', () => {
                     render={({ field }) => <input {...field} />}
                     name={`test.${index}.firstName` as const}
                     control={control}
-                    defaultValue={item.firstName}
                   />
                   <button type="button" onClick={() => remove(index)}>
                     delete
@@ -830,34 +808,18 @@ describe('remove', () => {
 
     render(<Component />);
 
-    actComponent(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'append' }));
-    });
-    actComponent(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'append' }));
-    });
-    actComponent(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'append' }));
-    });
-    actComponent(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'append' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
 
-    actComponent(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[1]);
-    });
-    actComponent(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[1]);
-    });
-    actComponent(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[1]);
-    });
-    actComponent(() => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[0]);
-    });
+    fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[1]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[1]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[1]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[0]);
   });
 
-  it("should not reset Controller's value during remove when Field Array name is already registered", () => {
+  it("should not reset Controller's value during remove when Field Array name is already registered", async () => {
     function Component() {
       const { control, handleSubmit } = useForm({
         defaultValues: {
@@ -870,7 +832,7 @@ describe('remove', () => {
       });
 
       return (
-        <form onSubmit={handleSubmit(() => {})}>
+        <form onSubmit={handleSubmit(noop)}>
           <ul>
             {fields.map((item, index) => {
               return (
@@ -878,7 +840,6 @@ describe('remove', () => {
                   <Controller
                     name={`test.${index}.lastName` as const}
                     control={control}
-                    defaultValue={item.lastName}
                     render={({ field }) => <input {...field} />}
                   />
                   <button type="button" onClick={() => remove(index)}>
@@ -942,7 +903,7 @@ describe('remove', () => {
           test: [],
         },
         undefined,
-        { criteriaMode: undefined, fields: {} },
+        { criteriaMode: undefined, fields: {}, names: [] },
       );
     });
 
@@ -965,7 +926,7 @@ describe('remove', () => {
         result.current.remove(0);
       });
 
-      expect(resolver).not.toBeCalled();
+      expect(resolver).toBeCalled();
     });
 
     it('should remove the first index correctly', async () => {
@@ -1005,15 +966,11 @@ describe('remove', () => {
             {fields.map((field, index) => {
               return (
                 <div key={field.id}>
-                  <input
-                    {...register(`test.${index}.firstName` as const)}
-                    defaultValue={field.firstName}
-                  />
+                  <input {...register(`test.${index}.firstName` as const)} />
                   <Controller
                     name={`test.${index}.lastName` as const}
                     control={control}
                     render={() => <div />}
-                    defaultValue={field.lastName}
                   />
                   <button
                     type={'button'}
@@ -1033,39 +990,235 @@ describe('remove', () => {
 
       render(<Component />);
 
-      await actComponent(async () => {
-        await fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-      });
+      fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-      expect(output).toEqual({
-        test: [
-          {
-            firstName: 'test',
-            lastName: 'test',
-          },
-          {
-            firstName: 'test1',
-            lastName: 'test1',
-          },
-        ],
-      });
+      await waitFor(() =>
+        expect(output).toEqual({
+          test: [
+            {
+              firstName: 'test',
+              lastName: 'test',
+            },
+            {
+              firstName: 'test1',
+              lastName: 'test1',
+            },
+          ],
+        }),
+      );
 
-      await actComponent(async () => {
-        fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0]);
-      });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0]);
 
-      await actComponent(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-      });
+      fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-      expect(output).toEqual({
-        test: [
-          {
-            firstName: 'test1',
-            lastName: 'test1',
-          },
-        ],
-      });
+      await waitFor(() =>
+        expect(output).toEqual({
+          test: [
+            {
+              firstName: 'test1',
+              lastName: 'test1',
+            },
+          ],
+        }),
+      );
     });
+  });
+
+  it('should remove correct value with async reset', async () => {
+    let output = {};
+
+    function App() {
+      const { handleSubmit, control, reset } = useForm({
+        defaultValues: {
+          test: [
+            {
+              title: '',
+              description: '',
+            },
+            {
+              title: '',
+              description: '',
+            },
+          ],
+        },
+      });
+      const { fields, remove } = useFieldArray({
+        name: 'test',
+        control,
+      });
+
+      React.useEffect(() => {
+        setTimeout(() => {
+          reset({
+            test: [
+              {
+                title: 'title1',
+                description: 'description1',
+              },
+              {
+                title: 'title2',
+                description: 'description2',
+              },
+            ],
+          });
+        }, 2000);
+      }, [reset]);
+
+      return (
+        <form onSubmit={handleSubmit((data) => (output = data))}>
+          {fields.map((field, index) => (
+            <div
+              key={field.id}
+              style={{ display: 'flex', alignItems: 'center' }}
+            >
+              <Controller
+                name={`test.${index}.title`}
+                control={control}
+                render={({ field }) => <input {...field} />}
+              />
+              <button type="button" onClick={() => remove(index)}>
+                remove
+              </button>
+            </div>
+          ))}
+          <button type="submit">submit</button>
+        </form>
+      );
+    }
+
+    render(<App />);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'remove' })[1]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+
+    await waitFor(() =>
+      expect(output).toEqual({
+        test: [{ title: 'title1', description: 'description1' }],
+      }),
+    );
+  });
+
+  it('should not omit keyName when provided', async () => {
+    type FormValues = {
+      test: {
+        test: string;
+        id: string;
+      }[];
+    };
+
+    const App = () => {
+      const [data, setData] = React.useState<FormValues>();
+      const { control, register, handleSubmit } = useForm<FormValues>({
+        defaultValues: {
+          test: [
+            { id: '1234', test: 'data' },
+            { id: '4567', test: 'data1' },
+          ],
+        },
+      });
+
+      const { fields, remove } = useFieldArray({
+        control,
+        name: 'test',
+      });
+
+      return (
+        <form onSubmit={handleSubmit(setData)}>
+          {fields.map((field, index) => {
+            return <input key={field.id} {...register(`test.${index}.test`)} />;
+          })}
+          <button
+            type={'button'}
+            onClick={() => {
+              remove(0);
+            }}
+          >
+            remove
+          </button>
+          <button>submit</button>
+          <p>{JSON.stringify(data)}</p>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'remove' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+
+    expect(
+      await screen.findByText('{"test":[{"id":"4567","test":"data1"}]}'),
+    ).toBeVisible();
+  });
+
+  it('should not omit keyName when provided and defaultValue is empty', async () => {
+    type FormValues = {
+      test: {
+        test: string;
+        id: string;
+      }[];
+    };
+    let k = 0;
+
+    const App = () => {
+      const [data, setData] = React.useState<FormValues>();
+      const { control, register, handleSubmit } = useForm<FormValues>();
+
+      const { fields, append, remove } = useFieldArray({
+        control,
+        name: 'test',
+      });
+
+      return (
+        <form onSubmit={handleSubmit(setData)}>
+          {fields.map((field, index) => {
+            return <input key={field.id} {...register(`test.${index}.test`)} />;
+          })}
+          <button
+            type={'button'}
+            onClick={() => {
+              remove(0);
+            }}
+          >
+            remove
+          </button>
+
+          <button
+            type={'button'}
+            onClick={() => {
+              append({
+                id: 'whatever' + k,
+                test: '1234' + k,
+              });
+              k = 1;
+            }}
+          >
+            append
+          </button>
+          <button>submit</button>
+          <p>{JSON.stringify(data)}</p>
+        </form>
+      );
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'append' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'remove' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+
+    expect(
+      await screen.findByText('{"test":[{"id":"whatever1","test":"12341"}]}'),
+    ).toBeVisible();
   });
 });

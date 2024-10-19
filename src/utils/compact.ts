@@ -1,1 +1,2 @@
-export default (value: any[]) => value.filter(Boolean);
+export default <TValue>(value: TValue[]) =>
+  Array.isArray(value) ? value.filter(Boolean) : [];

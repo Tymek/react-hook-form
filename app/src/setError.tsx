@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import {FieldPath} from "../../src/types";
+import { FieldPath } from '../../src/types';
 
 type FormInputs = {
   firstName: string;
@@ -70,7 +70,7 @@ const SetError: React.FC = () => {
       </p>
 
       <div id="errorContainer">
-        {Object.values(errors).map((error: any, index) => (
+        {Object.values(errors).map((error, index) => (
           <div id={`error${index}`} key={index}>
             {index} {error && error.type}
           </div>
